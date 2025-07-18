@@ -20,6 +20,7 @@ from predictive_coding_temporal_model import PredictiveCodingTemporalModel
 from RealTimeDataAbsorber import RealTimeDataAbsorber
 from multimodal_dataset_manager import DatasetIndex
 from interface.ws_server import run_ws_server
+from file_watcher import DataRootWatcher
 
 
 def load_config(path: str) -> dict:
@@ -58,6 +59,12 @@ def main(argv: Optional[list[str]] = None) -> None:
     parser.add_argument(
         "--no-feed", action="store_true", help="Skip feeding data_root on start"
     )
+    parser.add_argument(
+        "--watch-interval",
+        type=float,
+        default=5.0,
+        help="Seconds between scans for new data files",
+    )
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -84,6 +91,10 @@ def main(argv: Optional[list[str]] = None) -> None:
     absorber.attach_pc(pc)
 
     absorber.start_absorption()
+    watcher = DataRootWatcher(
+        absorber=absorber, data_root=data_root, interval=args.watch_interval
+    )
+    watcher.start()
 
     try:
         if not args.no_feed:
@@ -94,6 +105,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     except KeyboardInterrupt:
         logging.info("Shutting down...")
     finally:
+        watcher.stop()
         absorber.stop_absorption()
 
 
