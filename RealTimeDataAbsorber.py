@@ -43,6 +43,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 from interface.ws_server import run_ws_server
+from correlation_rag_module import CorrelationRAGMemory
+from predictive_coding_temporal_model import PredictiveCodingTemporalModel
 
 @dataclass
 class DataPoint:
@@ -613,6 +615,8 @@ class RealTimeDataAbsorber:
 
         # Queue for streaming metrics
         self.metrics_queue = metrics_queue
+        self.rag_memory: Optional[CorrelationRAGMemory] = None
+        self.pc_model: Optional[PredictiveCodingTemporalModel] = None
         
         # Performance tracking
         self.performance_metrics = {
@@ -660,6 +664,19 @@ class RealTimeDataAbsorber:
                 )
             """)
             conn.commit()
+
+    # ------------------------------------------------------------------
+    # Attachment helpers
+    # ------------------------------------------------------------------
+    def attach_rag(self, rag: CorrelationRAGMemory) -> None:
+        """Attach a CorrelationRAGMemory instance."""
+        self.rag_memory = rag
+        logging.info("CorrelationRAGMemory attached")
+
+    def attach_pc(self, pc: PredictiveCodingTemporalModel) -> None:
+        """Attach a PredictiveCodingTemporalModel instance."""
+        self.pc_model = pc
+        logging.info("PredictiveCodingTemporalModel attached")
     
     def start_absorption(self):
         """Start real-time data absorption"""
@@ -709,6 +726,18 @@ class RealTimeDataAbsorber:
                 embeddings=embeddings.numpy(),
                 metadata=combined_metadata
             )
+
+            # Optional attachments
+            if self.pc_model is not None:
+                emb_tensor = torch.tensor(data_point.embeddings).float().to(
+                    self.pc_model.device
+                )
+                self.pc_model.observe_step(emb_tensor)
+            if self.rag_memory is not None:
+                self.rag_memory.add(data_point.embeddings, 0, {
+                    "source": source,
+                    "timestamp": data_point.timestamp.isoformat(),
+                })
             
             # Add to buffer
             self.data_buffer.append(data_point)
