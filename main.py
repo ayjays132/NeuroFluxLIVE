@@ -68,9 +68,14 @@ def main(argv: Optional[list[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
-    data_root = Path(cfg.get("data_root", "./data_root"))
+    paths = cfg.get("paths", {})
+    data_root = Path(paths.get("data_root", "./data"))
     model_cfg = cfg.get("model", {})
+    training_cfg = cfg.get("training", {})
+    rag_cfg = cfg.get("rag", {})
+    pc_cfg = cfg.get("pc", {})
     embed_dim = int(model_cfg.get("embed_dim", 256))
+    context_window = int(pc_cfg.get("context_window", 32))
 
     logging.basicConfig(
         level=logging.INFO,
@@ -84,9 +89,15 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
     ws_thread.start()
 
-    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings=cfg)
-    pc = PredictiveCodingTemporalModel(embed_dim=embed_dim)
-    absorber = RealTimeDataAbsorber(model_config=model_cfg, metrics_queue=metrics_q)
+    rag_settings = {**rag_cfg, "embed_dim": embed_dim}
+    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings=rag_settings)
+    pc = PredictiveCodingTemporalModel(embed_dim=embed_dim, context_window=context_window)
+    absorber_settings = {**training_cfg, "db_path": paths.get("db_path", "realtime_learning.db")}
+    absorber = RealTimeDataAbsorber(
+        model_config=model_cfg,
+        settings=absorber_settings,
+        metrics_queue=metrics_q,
+    )
     absorber.attach_rag(rag)
     absorber.attach_pc(pc)
 
