@@ -122,9 +122,6 @@ class CollaborationServer:
     - Conceptual authentication and authorization decorators for security.
     - Structured error handling.
     """
-<<<<<<< HEAD
-    def __init__(self, host='0.0.0.0', port=5000, device='cpu'):
-=======
     def __init__(self, host: str = '0.0.0.0', port: int = 5000, device: str = 'cpu'):
         """
         Initializes the CollaborationServer.
@@ -133,9 +130,8 @@ class CollaborationServer:
             host (str): The host IP address for the Flask server to listen on.
             port (int): The port number for the Flask server.
             device (str): The PyTorch device ('cuda' or 'cpu') to perform dummy computations on.
-                          Automatically falls back to 'cpu' if 'cuda' is not available.
+                Automatically falls back to 'cpu' if 'cuda' is not available.
         """
->>>>>>> c9d035a (WIP: saving my local progress)
         self.app = Flask(__name__)
         self.app.config.from_object(Config) # Load configurations
 
@@ -201,34 +197,6 @@ class CollaborationServer:
             return jsonify({'message': 'Internal Server Error', 'error': "An unexpected error occurred."}), 500
 
     def _setup_routes(self):
-<<<<<<< HEAD
-        @self.app.route('/notes/<project_id>', methods=['GET', 'POST'])
-        def handle_notes(project_id):
-            # In a real app, you'd verify user authentication and permissions here
-            if request.method == 'GET':
-                # Simulate some PyTorch computation
-                dummy_tensor = torch.randn(3, 3, device=self.device)
-                _ = torch.inverse(dummy_tensor) if dummy_tensor.det() != 0 else dummy_tensor # Dummy computation
-                return jsonify({'notes': self.shared_notes[project_id]})
-            elif request.method == 'POST':
-                data = request.json
-                notes = data.get('notes', '')
-                user_id = data.get('user_id', 'anonymous') # Simulate user
-                self.shared_notes[project_id] = notes
-                # Simulate some PyTorch computation
-                dummy_tensor = torch.tensor([len(notes)], dtype=torch.float32, device=self.device)
-                _ = torch.log(dummy_tensor + 1) # Dummy computation
-                print(f"Project {project_id} notes updated by {user_id}")
-                return jsonify({'message': 'Notes updated successfully', 'notes': notes})
-
-        @self.app.route('/feedback/<project_id>', methods=['GET', 'POST'])
-        def handle_feedback(project_id):
-            if request.method == 'GET':
-                # Simulate some PyTorch computation
-                dummy_tensor = torch.randn(2, 2, device=self.device)
-                _ = torch.exp(dummy_tensor) # Dummy computation
-                return jsonify({'feedback': self.feedback_data[project_id]})
-=======
         """
         Defines and registers all API routes for the collaboration server.
         Each route includes logging, basic validation, and conceptual security checks.
@@ -257,9 +225,7 @@ class CollaborationServer:
                 except Exception as e:
                     logger.error(f"Error fetching notes for project '{project_id}': {e}", exc_info=True)
                     # Raise an exception to be caught by the 500 error handler
-                    raise Exception(f"Failed to retrieve notes: {e}") 
-
->>>>>>> c9d035a (WIP: saving my local progress)
+                    raise Exception(f"Failed to retrieve notes: {e}")
             elif request.method == 'POST':
                 data = request.json
                 if not data:
@@ -317,43 +283,6 @@ class CollaborationServer:
                     return jsonify({'message': 'Invalid input: "comment" must be a non-empty string.'}), 400
                 
                 feedback_item = {
-<<<<<<< HEAD
-                    "user_id": data.get('user_id', 'anonymous'),
-                    "comment": data.get('comment'),
-                    "timestamp": time.time()
-                }
-                self.feedback_data[project_id].append(feedback_item)
-                # Simulate some PyTorch computation
-                dummy_tensor = torch.tensor([len(self.feedback_data[project_id])], dtype=torch.float32, device=self.device)
-                _ = torch.sin(dummy_tensor) # Dummy computation
-                print(f"Feedback added to project {project_id} by {feedback_item['user_id']}")
-                return jsonify({'message': 'Feedback added successfully', 'feedback': feedback_item})
-
-        @self.app.route('/projects/<project_id>/members', methods=['GET', 'POST', 'DELETE'])
-        def manage_members(project_id):
-            if request.method == 'GET':
-                return jsonify({'members': list(self.project_members[project_id])})
-            elif request.method == 'POST':
-                data = request.json
-                user_id = data.get('user_id')
-                role = data.get('role', 'member')
-                if user_id:
-                    self.project_members[project_id].add(user_id)
-                    self.project_roles[project_id][user_id] = role
-                    print(f"User {user_id} added to project {project_id} with role {role}")
-                    return jsonify({'message': 'Member added', 'user_id': user_id, 'role': role})
-                return jsonify({'message': 'User ID required'}), 400
-            elif request.method == 'DELETE':
-                data = request.json
-                user_id = data.get('user_id')
-                if user_id and user_id in self.project_members[project_id]:
-                    self.project_members[project_id].remove(user_id)
-                    if user_id in self.project_roles[project_id]:
-                        del self.project_roles[project_id][user_id]
-                    print(f"User {user_id} removed from project {project_id}")
-                    return jsonify({'message': 'Member removed', 'user_id': user_id})
-                return jsonify({'message': 'User ID not found or required'}), 400
-=======
                     "user_id": g.user_id, # Use the authenticated user ID
                     "comment": comment,
                     "timestamp": datetime.now().isoformat() # ISO format for better readability and parsing
@@ -434,7 +363,6 @@ class CollaborationServer:
             # The @app.errorhandler(405) will catch this if it's not GET/POST/DELETE
             return jsonify({'message': 'Method not allowed for this endpoint.'}), 405
 
->>>>>>> c9d035a (WIP: saving my local progress)
 
     def run(self):
         """
@@ -449,29 +377,6 @@ class CollaborationServer:
         # Example Gunicorn command: gunicorn -w 4 'your_app_file:server.app' -b 0.0.0.0:5000
         self.app.run(host=self.host, port=self.port, debug=False) # debug should be False in production
 
-<<<<<<< HEAD
-if __name__ == '__main__':
-    if torch.cuda.is_available():
-        device = 'cuda'
-        print("CUDA is available! Using GPU.")
-    else:
-        device = 'cpu'
-        print("CUDA not available. Using CPU.")
-
-    server = CollaborationServer(device=device)
-    print("To run the server, uncomment `server.run()` and execute this file.")
-    print("Example usage with curl:")
-    print("\n--- Notes API ---")
-    print("GET notes: curl http://127.0.0.1:5000/notes/project_alpha")
-    print("POST notes: curl -X POST -H \"Content-Type: application/json\" -d '{\"user_id\": \"user1\", \"notes\": \"Initial research notes for project Alpha.\"}' http://127.0.0.1:5000/notes/project_alpha")
-    print("\n--- Feedback API ---")
-    print("GET feedback: curl http://127.0.0.1:5000/feedback/project_alpha")
-    print("POST feedback: curl -X POST -H \"Content-Type: application/json\" -d '{\"user_id\": \"user2\", \"comment\": \"Great progress on the literature review!\"}' http://127.0.0.1:5000/feedback/project_alpha")
-    print("\n--- Members API ---")
-    print("GET members: curl http://127.0.0.1:5000/projects/project_alpha/members")
-    print("POST member: curl -X POST -H \"Content-Type: application/json\" -d '{\"user_id\": \"user3\", \"role\": \"contributor\"}' http://127.0.0.1:5000/projects/project_alpha/members")
-    print("DELETE member: curl -X DELETE -H \"Content-Type: application/json\" -d '{\"user_id\": \"user3\"}' http://127.0.0.1:5000/projects/project_alpha/members")
-=======
 # --- Main execution block for direct testing ---
 if __name__ == '__main__':
     # Initialize the server
@@ -490,25 +395,6 @@ if __name__ == '__main__':
     logger.info(f"{Colors.YELLOW}For production, always use a WSGI server (e.g., Gunicorn) with HTTPS.{Colors.RESET}")
     
     logger.info(f"\n{Colors.BRIGHT_GREEN}Example usage with `curl` (simulating authentication with X-User-Id header):{Colors.RESET}")
->>>>>>> c9d035a (WIP: saving my local progress)
-
-    logger.info(f"\n{Colors.BLUE}--- 1. Notes API ---{Colors.RESET}")
-    logger.info(f"{Colors.GREEN}  POST notes (create/update):{Colors.RESET}")
-    logger.info(f"    curl -X POST -H \"Content-Type: application/json\" -H \"X-User-Id: user1\" \\")
-    logger.info(f"         -d '{{\"notes\": \"Initial research notes for Project Alpha. Focus on data acquisition.\"}}' \\")
-    logger.info(f"         http://127.0.0.1:5000/notes/project_alpha")
-    logger.info(f"{Colors.GREEN}  GET notes (retrieve):{Colors.RESET}")
-    logger.info(f"    curl -H \"X-User-Id: user1\" http://127.0.0.1:5000/notes/project_alpha")
-
-    logger.info(f"\n{Colors.BLUE}--- 2. Feedback API ---{Colors.RESET}")
-    logger.info(f"{Colors.GREEN}  POST feedback (add):{Colors.RESET}")
-    logger.info(f"    curl -X POST -H \"Content-Type: application/json\" -H \"X-User-Id: user2\" \\")
-    logger.info(f"         -d '{{\"comment\": \"Great progress on the literature review! Let's discuss methodology.\"}}' \\")
-    logger.info(f"         http://127.0.0.1:5000/feedback/project_alpha")
-    logger.info(f"{Colors.GREEN}  GET feedback (retrieve):{Colors.RESET}")
-    logger.info(f"    curl -H \"X-User-Id: user1\" http://127.0.0.1:5000/feedback/project_alpha")
-
-    logger.info(f"\n{Colors.BLUE}--- 3. Members API ---{Colors.RESET}")
     logger.info(f"{Colors.GREEN}  POST member (add):{Colors.RESET}")
     logger.info(f"    curl -X POST -H \"Content-Type: application/json\" -H \"X-User-Id: admin_user\" \\")
     logger.info(f"         -d '{{\"user_id\": \"user3\", \"role\": \"contributor\"}}' \\")
@@ -520,9 +406,9 @@ if __name__ == '__main__':
     logger.info(f"         -d '{{\"user_id\": \"user3\"}}' \\")
     logger.info(f"         http://127.0.0.1:5000/projects/project_alpha/members")
 
-    logger.info(f"\n{Colors.BRIGHT_MAGENTA}{Colors.BOLD}╔═════════════════════════════════════════════════════════════════════════╗{Colors.RESET}")
+    logger.info(f"\n{Colors.BRIGHT_MAGENTA}{Colors.BOLD}╔════════════════════════════════════════════════════════════════════════╗{Colors.RESET}")
     logger.info(f"{Colors.BRIGHT_MAGENTA}{Colors.BOLD}║             ⭐ End of Collaboration Server Setup Instructions             ║{Colors.RESET}")
-    logger.info(f"{Colors.BRIGHT_MAGENTA}{Colors.BOLD}╚═════════════════════════════════════════════════════════════════════════╝{Colors.RESET}")
+    logger.info(f"{Colors.BRIGHT_MAGENTA}{Colors.BOLD}╚════════════════════════════════════════════════════════════════════════╝{Colors.RESET}")
 
     # --- UNCOMMENT THE LINE BELOW TO RUN THE FLASK SERVER ---
-    # server.run() 
+    # server.run()
