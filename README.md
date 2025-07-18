@@ -256,10 +256,12 @@ print(best)
 
 ## Running Tests
 Run the unit tests with `pytest` from the repository root after installing the
-development requirements:
+standard and development requirements. Both files must be installed or
+`pytest` will raise import errors during collection:
 
 ```bash
 source .venv/bin/activate  # if not already active
+pip install -r requirements.txt
 pip install -r requirements-dev.txt
 pytest
 ```
