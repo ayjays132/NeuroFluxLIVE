@@ -1,5 +1,15 @@
-data_root: "./data"
+paths:
+  data_root: "./data"
+  db_path: "realtime_learning.db"
+training:
+  learning_rate: 0.0001
+  buffer_size: 10000
+  batch_size: 32
+  update_frequency: 100
+  adaptation_threshold: 0.7
 model:
   embed_dim: 256
-  learning_rate: 0.0001
-memory_budget: 50000
+rag:
+  memory_budget: 50000
+pc:
+  context_window: 32
