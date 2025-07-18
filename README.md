@@ -52,6 +52,11 @@ To start the collaboration server used for peer collaboration, run the following
 python3 peer_collab/collaboration_server.py
 ```
 
+The realtime metrics server starts automatically when running
+`RealTimeDataAbsorber.py`. Any WebSocket client can connect to
+`ws://<host>:8765` (replace `<host>` if running remotely) to receive
+JSON updates describing current processing statistics.
+
 ## Configuration
 Default settings such as the data directory, model embedding dimension and
 memory budget live in `config.yaml`. `main.py` loads this file automatically.
