@@ -278,7 +278,7 @@ class SourceEvaluator:
         log.info(f"\n{Colors.BLUE}{Colors.BOLD}--- Initiating Academic Search for '{query}' on {api_type.upper()} ---{Colors.RESET}")
         results = []
         if api_type == "arxiv":
-            arxiv_url = f"http://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results=5"
+            arxiv_url = f"https://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results=5"
             log.info(f"{Colors.DIM}  Querying arXiv: {arxiv_url}{Colors.RESET}")
             try:
                 response = requests.get(arxiv_url, timeout=15)
