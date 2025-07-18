@@ -1,7 +1,15 @@
 
 """Entry point demonstrating the various SelfResearch modules."""
 
+import argparse
+import yaml
 import torch
+
+
+def load_config(path: str) -> dict:
+    """Load a YAML configuration file."""
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 from research_workflow.topic_selector import TopicSelector
 from digital_literacy.source_evaluator import SourceEvaluator
@@ -12,7 +20,16 @@ from security.auth_and_ethics import AuthAndEthics
 from data.dataset_loader import load_and_tokenize
 from train.trainer import TrainingConfig, train_model
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Run the SelfResearch demo")
+    parser.add_argument(
+        "--config", default="config.yaml", help="Path to YAML configuration"
+    )
+    args = parser.parse_args(argv)
+
+    settings = load_config(args.config)
+    print(f"Loaded config from {args.config}: {settings}")
+
     # Determine device (CUDA or CPU)
     if torch.cuda.is_available():
         device = 'cuda'

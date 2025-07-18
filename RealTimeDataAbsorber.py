@@ -540,14 +540,27 @@ class AdaptiveNeuralNetwork(nn.Module):
 
 class RealTimeDataAbsorber:
     """Main class for real-time data absorption and learning"""
-    
-    def __init__(self, 
+
+    def __init__(self,
                  model_config: Dict[str, Any],
+                 settings: Optional[Dict[str, Any]] = None,
                  learning_rate: float = 1e-4,
                  buffer_size: int = 10000,
                  batch_size: int = 32,
                  update_frequency: int = 100,
                  adaptation_threshold: float = 0.7):
+
+        if settings:
+            learning_rate = settings.get("learning_rate", learning_rate)
+            buffer_size = settings.get("buffer_size", buffer_size)
+            batch_size = settings.get("batch_size", batch_size)
+            update_frequency = settings.get("update_frequency", update_frequency)
+            adaptation_threshold = settings.get(
+                "adaptation_threshold", adaptation_threshold
+            )
+            self.db_path = settings.get("db_path", "realtime_learning.db")
+        else:
+            self.db_path = "realtime_learning.db"
         
         # Configuration
         self.learning_rate = learning_rate
@@ -593,7 +606,6 @@ class RealTimeDataAbsorber:
         }
         
         # Database for persistence
-        self.db_path = "realtime_learning.db"
         self._init_database()
         
         logging.info("RealTimeDataAbsorber initialized")

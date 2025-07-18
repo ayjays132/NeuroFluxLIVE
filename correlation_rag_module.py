@@ -22,13 +22,29 @@ class CorrelationRAGMemory:
     """
 
     def __init__(self,
-                 emb_dim: int,
+                 emb_dim: Optional[int] = None,
                  memory_budget: int = 50_000,
-                 device: str = "cuda" if torch.cuda.is_available() else "cpu",
+                 device: Optional[str] = None,
                  pq_m: int = 16,
                  hnsw_m: int = 32,
                  l2_norm: bool = True,
-                 save_path: str = "corr_rag.mem"):
+                 save_path: str = "corr_rag.mem",
+                 settings: Optional[Dict[str, Any]] = None):
+
+        if settings:
+            emb_dim = settings.get("embed_dim", emb_dim)
+            memory_budget = settings.get("memory_budget", memory_budget)
+            device = settings.get("device", device)
+            pq_m = settings.get("pq_m", pq_m)
+            hnsw_m = settings.get("hnsw_m", hnsw_m)
+            l2_norm = settings.get("l2_norm", l2_norm)
+            save_path = settings.get("save_path", save_path)
+
+        if emb_dim is None:
+            raise ValueError("embed_dim must be provided via argument or settings")
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+
         self.emb_dim        = emb_dim
         self.memory_budget  = memory_budget
         self.device         = device
