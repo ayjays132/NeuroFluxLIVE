@@ -81,13 +81,10 @@ class RubricGrader:
 
         Args:
             device (str): The device to use for computations ('cuda' or 'cpu').
-<<<<<<< HEAD
-=======
 
         Raises:
             ValueError: If an unsupported device string is provided.
             RuntimeError: If 'cuda' is specified but not available, or model loading fails.
->>>>>>> c9d035a (WIP: saving my local progress)
         """
         log.info(f"{Colors.BLUE}Initializing RubricGrader...{Colors.RESET}")
         
@@ -106,14 +103,12 @@ class RubricGrader:
         else:
             raise ValueError(f"{Colors.RED}Unsupported device: '{device}'. Please choose 'cpu' or 'cuda'.{Colors.RESET}")
 
-<<<<<<< HEAD
         # Load a pre-trained model for sentence embeddings
         self.tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
         self.model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').to(self.device)
 
         # Initialize a text generation pipeline for feedback
         self.feedback_generator_pipeline = pipeline("text-generation", model="distilgpt2", device=0 if self.device.type == 'cuda' else -1)
-=======
         # --- Model Loading ---
         try:
             log.info(f"{Colors.CYAN}Loading sentence embedding model (all-MiniLM-L6-v2)...{Colors.RESET}")
@@ -174,7 +169,6 @@ class RubricGrader:
         self._current_rubric_hash = rubric_hash
         log.info(f"{Colors.GREEN}Rubric embeddings cached successfully for {len(self._rubric_embeddings_cache)} criteria.{Colors.RESET}")
 
->>>>>>> c9d035a (WIP: saving my local progress)
 
     def _get_sentence_embedding(self, text: str) -> torch.Tensor:
         """
@@ -190,9 +184,7 @@ class RubricGrader:
         Raises:
             ValueError: If input text is empty or invalid (already handled by returning zero tensor).
         """
-<<<<<<< HEAD
         encoded_input = self.tokenizer(text, padding=True, truncation=True, return_tensors='pt').to(self.device)
-=======
         if not isinstance(text, str) or not text.strip():
             log.warning(f"{Colors.YELLOW}Received empty or invalid text for embedding. Returning zero tensor.{Colors.RESET}")
             return torch.zeros(1, self.model.config.hidden_size, device=self.device) # Use model's hidden_size dynamically
@@ -205,7 +197,6 @@ class RubricGrader:
             max_length=self.tokenizer.model_max_length # Ensure max_length is respected
         ).to(self.device)
         
->>>>>>> c9d035a (WIP: saving my local progress)
         with torch.no_grad():
             model_output = self.model(**encoded_input)
         
@@ -225,19 +216,16 @@ class RubricGrader:
         Grades a single criterion for a submission, calculating similarity, score, and generating feedback.
 
         Args:
-<<<<<<< HEAD
             submission_text (str): The text of the student's submission.
             rubric (dict): A dictionary representing the rubric, e.g.,
                            {
                                "criterion1": {"expected_content": "...", "max_score": 10},
                                "criterion2": {"expected_content": "...", "max_score": 15}
                            }
-=======
             submission_text (str): The text content of the submission.
             criterion_name (str): The name of the criterion.
             criterion_details (Dict[str, Any]): Details of the criterion including 'expected_content' and 'max_score'.
 
->>>>>>> c9d035a (WIP: saving my local progress)
         Returns:
             Dict[str, Any]: Grading results for the criterion (score, similarity, feedback).
         """
@@ -468,18 +456,14 @@ class RubricGrader:
         
         Args:
             submission_text (str): The student's submission text.
-<<<<<<< HEAD
             expected_content (str): The expected content for the criterion.
-=======
             expected_content (str): The expected content for the criterion (used for context).
->>>>>>> c9d035a (WIP: saving my local progress)
             score (float): The calculated score for the criterion.
             max_score (float): The maximum possible score for the criterion.
         
         Returns:
             str: Generated feedback.
         """
-<<<<<<< HEAD
         # More nuanced prompt for feedback generation
         if score / max_score > 0.8:
             feedback_prompt = f"The submission demonstrates strong understanding of the topic. Specifically, regarding '{expected_content[:50]}...', the submission was well-articulated. Provide further suggestions for excellence. Feedback:"
@@ -495,7 +479,6 @@ class RubricGrader:
             num_return_sequences=1,
             truncation=True
         )[0]['generated_text']
-=======
         log.debug(f"{Colors.BLUE}Generating feedback for score {score:.2f}/{max_score}...{Colors.RESET}")
         
         if max_score <= 0:
@@ -528,7 +511,6 @@ class RubricGrader:
         context_len = 350 # Increased context length for richer snippets
         submission_snippet = submission_text[:context_len] + ("..." if len(submission_text) > context_len else "")
         expected_snippet = expected_content[:context_len] + ("..." if len(expected_content) > context_len else "")
->>>>>>> c9d035a (WIP: saving my local progress)
 
         feedback_prompt = (
             f"As an empathetic, expert academic reviewer, provide constructive feedback for a student's submission. "
@@ -599,13 +581,11 @@ if __name__ == "__main__":
 
     # --- Device Selection for Grader ---
     if torch.cuda.is_available():
-<<<<<<< HEAD
         device = 'cuda'
         print("CUDA is available! Using GPU.")
     else:
         device = 'cpu'
         print("CUDA not available. Using CPU.")
-=======
         grader_device = 'cuda'
         log.info(f"{Colors.BRIGHT_GREEN}CUDA detected. Attempting to use GPU for grading.{Colors.RESET}")
     else:
@@ -614,7 +594,6 @@ if __name__ == "__main__":
         
     try:
         grader = RubricGrader(device=grader_device)
->>>>>>> c9d035a (WIP: saving my local progress)
 
         # Complex Rubric Example
         rubric_example_complex = {
@@ -642,7 +621,6 @@ if __name__ == "__main__":
         
         log.info(f"\n{Colors.BRIGHT_CYAN}{Colors.BOLD}--- Beginning Individual Submission Grading ---{Colors.RESET}\n")
 
-<<<<<<< HEAD
     rubric_example = {
         "Introduction Clarity": {"expected_content": "The introduction should clearly state the research question, its significance, and the paper's structure.", "max_score": 10},
         "Methodology Detail": {"expected_content": "The methodology section must provide sufficient detail for replication, including data sources, experimental design, and analytical techniques.", "max_score": 15}
@@ -665,7 +643,6 @@ if __name__ == "__main__":
         print(f"  Score: {result['score']:.2f}/{result['max_score']}")
         print(f"  Similarity: {result['similarity']:.2f}")
         print(f"  Feedback: {result['feedback']}")
-=======
         # --- Test Submission 1: High Quality ---
         log.info(f"{Colors.CYAN}{Colors.BOLD}--- Submission 1: High Quality Example ---{Colors.RESET}")
         submission1_high_quality = (
@@ -746,7 +723,6 @@ if __name__ == "__main__":
         log.info(f"{Colors.BRIGHT_CYAN}{Colors.BOLD}--- End of Submission 3 Results ---{Colors.RESET}\n")
 
         log.info(f"\n{Colors.BRIGHT_CYAN}{Colors.BOLD}--- Beginning Batch Grading ---{Colors.RESET}\n")
->>>>>>> c9d035a (WIP: saving my local progress)
 
         # --- Test Batch Grading ---
         log.info(f"{Colors.CYAN}{Colors.BOLD}--- Testing Batch Grading with Multiple Submissions ---{Colors.RESET}")
