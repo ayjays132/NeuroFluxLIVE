@@ -124,4 +124,64 @@ class DatasetIndex:
         print(f"📄 Loaded index with {len(self.records)} records from {self.jsonl}")
 
 # ------------------------------------------------------------------ #
-class LMDBCache
+class LMDBCache:
+    """Simple LMDB-backed cache for tensors."""
+
+    def __init__(self, path: str, readonly: bool = False,
+                 map_size: int = 1 << 40) -> None:
+        """Create a new cache or open an existing one.
+
+        Args:
+            path: Directory where the LMDB environment lives.
+            readonly: Open in read-only mode.
+            map_size: Maximum size of the database in bytes.
+        """
+        self.path = pathlib.Path(path)
+        self.readonly = readonly
+        if not readonly:
+            self.path.mkdir(parents=True, exist_ok=True)
+        self.env = lmdb.open(
+            str(self.path),
+            subdir=True,
+            readonly=readonly,
+            map_size=map_size,
+            create=not readonly,
+            lock=not readonly,
+            readahead=False,
+            meminit=False,
+        )
+
+    def get(self, key: str) -> Optional[torch.Tensor]:
+        """Retrieve a tensor by key or ``None`` if missing."""
+        with self.env.begin(write=False, buffers=True) as txn:
+            buf = txn.get(key.encode("utf-8"))
+        if buf is None:
+            return None
+        obj = msgpack.unpackb(bytes(buf), raw=False)
+        dtype = getattr(torch, obj["dtype"].split(".")[-1])
+        return torch.tensor(obj["data"], dtype=dtype)
+
+    def put(self, key: str, tensor: torch.Tensor) -> None:
+        """Store ``tensor`` under ``key``."""
+        if self.readonly:
+            raise RuntimeError("Cannot write to read-only LMDB cache")
+        arr = tensor.detach().cpu()
+        obj = {
+            "dtype": str(arr.dtype),
+            "data": arr.tolist(),
+        }
+        data = msgpack.packb(obj, use_bin_type=True)
+        with self.env.begin(write=True) as txn:
+            txn.put(key.encode("utf-8"), data)
+
+    def close(self) -> None:
+        """Close the underlying LMDB environment."""
+        if self.env is not None:
+            self.env.close()
+
+    def __enter__(self) -> "LMDBCache":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+

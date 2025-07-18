@@ -20,3 +20,5 @@ pillow
 pyyaml
 tqdm
 torchvision
+lmdb
+msgpack
