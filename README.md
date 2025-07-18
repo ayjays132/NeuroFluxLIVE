@@ -10,6 +10,18 @@ SelfResearch provides a modular environment for experimenting with HuggingFace t
    ```
 CUDA is automatically detected. If a GPU is available, PyTorch will use it.
 
+The requirements file includes additional libraries used across the project:
+
+* `faiss-cpu` – vector search and clustering
+* `opencv-python` – image processing utilities
+* `soundfile` – reading and writing audio files
+* `aiohttp` – asynchronous HTTP requests
+* `psutil` – system resource monitoring
+* `pillow` – image loading with `PIL`
+* `pyyaml` – YAML configuration handling
+* `tqdm` – progress bars for dataset processing
+* `torchvision` – vision transforms
+
 ## Running the Example Workflow
 Execute `main.py` to launch a demonstration of all modules:
 ```bash
