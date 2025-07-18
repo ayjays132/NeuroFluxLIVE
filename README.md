@@ -237,6 +237,16 @@ print(best)
 ```
 
 
+## Running Tests
+Run the unit tests with `pytest`:
+
+```bash
+pytest
+```
+
+The `requirements.txt` file pins a CPU-only build of PyTorch so tests run even
+without a GPU.
+
 
 ## License
 This repository is provided for research and experimentation purposes only.
