@@ -9,6 +9,7 @@ SelfResearch provides a modular environment for experimenting with HuggingFace t
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
+   pip install -r requirements-dev.txt  # needed for running tests
    ```
 CUDA is automatically detected. If a GPU is available, PyTorch will use it.
 
@@ -254,10 +255,12 @@ print(best)
 
 
 ## Running Tests
-Run the unit tests with `pytest` from the repository root:
+Run the unit tests with `pytest` from the repository root after installing the
+development requirements:
 
 ```bash
 source .venv/bin/activate  # if not already active
+pip install -r requirements-dev.txt
 pytest
 ```
 
