@@ -185,3 +185,111 @@ class LMDBCache:
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
 
+
+
+
+class BalancedModalitySampler(Sampler[int]):
+    """Yield dataset indices round-robin across modalities."""
+
+    def __init__(self, records: List[Record], shuffle: bool = True, seed: int = 42) -> None:
+        self.records = list(records)
+        self.shuffle = shuffle
+        self.seed = seed
+        self._groups: Dict[str, List[int]] = {}
+        self._order: List[str] = []
+        for idx, rec in enumerate(self.records):
+            if rec.modality not in self._groups:
+                self._groups[rec.modality] = []
+                self._order.append(rec.modality)
+            self._groups[rec.modality].append(idx)
+
+    def __iter__(self):
+        groups = {m: list(idxs) for m, idxs in self._groups.items()}
+        if self.shuffle:
+            rng = random.Random(self.seed)
+            for idxs in groups.values():
+                rng.shuffle(idxs)
+        remaining = True
+        while remaining:
+            remaining = False
+            for mod in self._order:
+                bucket = groups.get(mod)
+                if bucket:
+                    yield bucket.pop(0)
+                    remaining = True
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+
+class MultimodalDataset(Dataset):
+    """Dataset that loads items from multiple modalities with caching."""
+
+    def __init__(self, records: List[Record], root: str, cache: Optional[LMDBCache] = None) -> None:
+        self.records = list(records)
+        self.root = pathlib.Path(root)
+        self.cache = cache
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Record]:
+        rec = self.records[index]
+        tensor = self._load_tensor(rec)
+        return tensor, rec
+
+    # -------------------------------------------------------------- #
+    def _load_tensor(self, rec: Record) -> torch.Tensor:
+        if self.cache:
+            cached = self.cache.get(rec.id)
+            if cached is not None:
+                return cached
+        path = self.root / rec.rel_path
+        if rec.modality == "text":
+            data = path.read_text(encoding="utf-8")
+            arr = np.frombuffer(data.encode("utf-8"), dtype=np.uint8)
+            tensor = torch.tensor(arr, dtype=torch.uint8)
+        elif rec.modality == "image":
+            with Image.open(path) as img:
+                arr = np.array(img.convert("RGB"))
+            tensor = torch.tensor(arr).permute(2, 0, 1)
+        elif rec.modality == "audio":
+            audio, _ = sf.read(path.as_posix())
+            if audio.ndim > 1:
+                audio = np.mean(audio, axis=1)
+            tensor = torch.tensor(audio)
+        elif rec.modality == "sensor":
+            obj = json.loads(path.read_text())
+            values = list(obj.values()) if isinstance(obj, dict) else obj
+            tensor = torch.tensor(values, dtype=torch.float32)
+        else:
+            raise ValueError(f"Unknown modality: {rec.modality}")
+        if self.cache:
+            self.cache.put(rec.id, tensor)
+        return tensor
+
+
+def create_balanced_dataloader(
+    dataset: MultimodalDataset,
+    batch_size: int = 1,
+    num_workers: int = 0,
+    shuffle: bool = True,
+    seed: int = 42,
+    **kwargs: Any,
+) -> DataLoader:
+    """Return a ``DataLoader`` using ``BalancedModalitySampler``."""
+
+    sampler = BalancedModalitySampler(dataset.records, shuffle=shuffle, seed=seed)
+
+    def collate_fn(batch):
+        tensors, records = zip(*batch)
+        return list(tensors), list(records)
+
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=sampler,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        **kwargs,
+    )
