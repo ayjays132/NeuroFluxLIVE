@@ -52,6 +52,15 @@ To start the collaboration server used for peer collaboration, run the following
 python3 peer_collab/collaboration_server.py
 ```
 
+## Configuration
+Default settings such as the data directory, model embedding dimension and
+memory budget live in `config.yaml`. `main.py` loads this file automatically.
+Provide a different file with the `--config` option:
+
+```bash
+python3 main.py --config my_config.yaml
+```
+
 ## Module Walkthrough
 The example workflow in `main.py` demonstrates how each component fits together.
 The script performs the following steps:
