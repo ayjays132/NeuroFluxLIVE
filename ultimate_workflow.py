@@ -111,7 +111,7 @@ def main() -> None:
         resp = requests.get("http://127.0.0.1:5000/notes/demo", timeout=1)
         if resp.ok:
             print("Collaboration server notes:", resp.json())
-    except Exception as exc:  # pragma: no cover - server typically not running
+    except requests.exceptions.RequestException as exc:  # pragma: no cover - server typically not running
         print("Could not reach collaboration server:", exc)
 
 
