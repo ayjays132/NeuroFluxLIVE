@@ -1,9 +1,8 @@
 
-import torch
-from pathlib import Path
 import hashlib
-import os
 from datetime import datetime
+
+import torch
 
 from utils.colors import Colors
 
@@ -81,12 +80,31 @@ class AuthAndEthics:
         if user_data["password_hash"] == self._hash_password(password):
             # Simulate some PyTorch computation
             dummy_tensor = torch.tensor([1.0], dtype=torch.float32, device=self.device)
-            _ = torch.tanh(dummy_tensor) # Dummy computation
+            _ = torch.tanh(dummy_tensor)  # Dummy computation
             print(f"User {username} authenticated.")
             return True
-        else:
-            print(f"Incorrect password for user {username}.")
+
+        print(f"Incorrect password for user {username}.")
+        return False
+
+    def is_authorized(self, username: str) -> bool:
+        """Check if a user is authorized for privileged actions."""
+        user_data = self.users.get(username)
+        if not user_data:
+            print(f"{Colors.RED}Authorization failed: User '{username}' not found.{Colors.RESET}")
             return False
+
+        authorized_roles = ["admin", "researcher"]
+        if user_data["role"] in authorized_roles:
+            print(
+                f"{Colors.GREEN}Authorization granted for user '{username}' (Role: {user_data['role']}).{Colors.RESET}"
+            )
+            return True
+
+        print(
+            f"{Colors.YELLOW}Authorization denied for user '{username}' (Role: {user_data['role']}). Insufficient privileges.{Colors.RESET}"
+        )
+        return False
 
     def has_permission(self, username: str, action: str) -> bool:
         """
@@ -107,45 +125,52 @@ class AuthAndEthics:
         _ = torch.relu(dummy_tensor) # Dummy computation
         return action in self.roles.get(user_role, {}).get("permissions", [])
 
-    def flag_ethical_concern(self, description: str, research_id: str = None, flagged_by: str = "system") -> None:
-        """
-        Flags an ethical concern with more details.
+    def flag_ethical_concern(
+        self, description: str, research_id: str | None = None, flagged_by: str = "system"
+    ) -> int:
+        """Flag an ethical concern and return its ID.
+
         Args:
-            description (str): Description of the ethical concern.
-            research_id (str): Optional ID of the research project related to the concern.
-            flagged_by (str): The user or system component that flagged the concern.
+            description: Description of the ethical concern.
+            research_id: Optional ID of the research project related to the concern.
+            flagged_by: The user or system component that flagged the concern.
+
+        Returns:
+            int: Identifier of the newly logged concern.
         """
         concern = {
+            "id": len(self.ethical_flags),
             "description": description,
             "research_id": research_id,
             "status": "pending",
             "flagged_by": flagged_by,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
         self.ethical_flags.append(concern)
         # Simulate some PyTorch computation
         dummy_tensor = torch.tensor([len(self.ethical_flags)], dtype=torch.float32, device=self.device)
-        _ = torch.log1p(dummy_tensor) # Dummy computation
-        print(f"Ethical concern flagged: {description}")
+        _ = torch.log1p(dummy_tensor)  # Dummy computation
+        print(f"Ethical concern flagged (ID: {concern['id']}): {description}")
+        return concern["id"]
 
-    def review_ethical_concern(self, concern_index: int, new_status: str, reviewed_by: str) -> bool:
+    def review_ethical_concern(self, concern_id: int, new_status: str, reviewed_by: str) -> bool:
         """
         Reviews and updates the status of an ethical concern.
         Args:
-            concern_index (int): The index of the concern in the ethical_flags list.
+            concern_id (int): The index of the concern in the ``ethical_flags`` list.
             new_status (str): The new status (e.g., "resolved", "dismissed", "under_review").
             reviewed_by (str): The user who reviewed the concern.
         Returns:
             bool: True if the concern was updated, False otherwise.
         """
-        if 0 <= concern_index < len(self.ethical_flags):
-            self.ethical_flags[concern_index]["status"] = new_status
-            self.ethical_flags[concern_index]["reviewed_by"] = reviewed_by
-            self.ethical_flags[concern_index]["reviewed_at"] = datetime.now().isoformat()
+        if 0 <= concern_id < len(self.ethical_flags):
+            self.ethical_flags[concern_id]["status"] = new_status
+            self.ethical_flags[concern_id]["reviewed_by"] = reviewed_by
+            self.ethical_flags[concern_id]["reviewed_at"] = datetime.now().isoformat()
             # Simulate some PyTorch computation
-            dummy_tensor = torch.tensor([concern_index], dtype=torch.float32, device=self.device)
-            _ = torch.exp(dummy_tensor) # Dummy computation
-            print(f"Ethical concern {concern_index} updated to {new_status} by {reviewed_by}.")
+            dummy_tensor = torch.tensor([concern_id], dtype=torch.float32, device=self.device)
+            _ = torch.exp(dummy_tensor)  # Dummy computation
+            print(f"Ethical concern {concern_id} updated to {new_status} by {reviewed_by}.")
             return True
         return False
 
@@ -162,108 +187,6 @@ class AuthAndEthics:
             return [flag for flag in self.ethical_flags if flag["status"] == status]
         return self.ethical_flags
 
-# Your existing AuthAndEthics class (or relevant parts for context)
-class AuthAndEthics:
-    def __init__(self, device='cpu'):
-        self.device = device
-        self.users = {}
-        self.ethical_flags = []
-        # Define permissions for each role
-        self.permissions = {
-            "admin": ["manage_roles", "flag_ethics", "review_ethics", "submit_research"],
-            "researcher": ["submit_research", "flag_ethics"],
-            "student": ["view_research"]
-        }
-        print(f"{Colors.BLUE}AuthAndEthics system initialized on {self.device}.{Colors.RESET}")
-
-
-    def register_user(self, username, password, role):
-        if username in self.users:
-            print(f"{Colors.YELLOW}User '{username}' already exists.{Colors.RESET}")
-            return False
-        if role not in self.permissions:
-            print(f"{Colors.RED}Invalid role '{role}'.{Colors.RESET}")
-            return False
-        self.users[username] = {"password": password, "role": role}
-        print(f"{Colors.GREEN}User '{username}' registered with role '{role}'.{Colors.RESET}")
-        return True
-
-    def authenticate_user(self, username, password):
-        user_info = self.users.get(username)
-        if user_info and user_info["password"] == password:
-            print(f"{Colors.GREEN}{Colors.BOLD}Authentication successful for '{username}' ({user_info['role']}).{Colors.RESET}")
-            return True
-        print(f"{Colors.RED}{Colors.BOLD}Authentication failed for '{username}'.{Colors.RESET}")
-        return False
-
-    def is_authorized(self, username: str) -> bool:
-        """
-        Checks if a user is authorized to perform a high-level action like running training.
-        This simplified version checks if the user exists and has a role other than 'guest' or 'student'.
-        You can customize this logic based on your authorization rules.
-        Args:
-            username (str): The username to check.
-        Returns:
-            bool: True if authorized, False otherwise.
-        """
-        user_data = self.users.get(username)
-        if not user_data:
-            print(f"{Colors.RED}Authorization failed: User '{username}' not found.{Colors.RESET}")
-            return False
-
-        # Example: Only 'admin' and 'researcher' roles are authorized to run training
-        authorized_roles = ["admin", "researcher"]
-        if user_data["role"] in authorized_roles:
-            print(f"{Colors.GREEN}Authorization granted for user '{username}' (Role: {user_data['role']}).{Colors.RESET}")
-            return True
-        else:
-            print(f"{Colors.YELLOW}Authorization denied for user '{username}' (Role: {user_data['role']}). Insufficient privileges.{Colors.RESET}")
-            return False
-
-    def has_permission(self, username, permission):
-        user_info = self.users.get(username)
-        if not user_info:
-            print(f"{Colors.RED}User '{username}' not found.{Colors.RESET}")
-            return False
-        
-        user_role = user_info["role"]
-        if permission in self.permissions.get(user_role, []):
-            print(f"{Colors.CYAN}User '{username}' ({user_role}) {Colors.BOLD}HAS{Colors.RESET}{Colors.CYAN} permission: {permission}.{Colors.RESET}")
-            return True
-        print(f"{Colors.YELLOW}User '{username}' ({user_role}) {Colors.RED}DOES NOT HAVE{Colors.RESET}{Colors.YELLOW} permission: {permission}.{Colors.RESET}")
-        return False
-
-    def flag_ethical_concern(self, concern_description, project_id=None, flagged_by="unknown"):
-        concern = {
-            "id": len(self.ethical_flags),
-            "description": concern_description,
-            "project_id": project_id,
-            "flagged_by": flagged_by,
-            "status": "pending" # pending, resolved, dismissed
-        }
-        self.ethical_flags.append(concern)
-        print(f"{Colors.MAGENTA}Ethical concern flagged (ID: {concern['id']}): {concern_description}{Colors.RESET}")
-        return concern['id']
-
-    def get_ethical_flags(self, status=None):
-        if status:
-            return [flag for flag in self.ethical_flags if flag["status"] == status]
-        return self.ethical_flags
-
-    def review_ethical_concern(self, concern_id, new_status, reviewed_by):
-        if not (0 <= concern_id < len(self.ethical_flags)):
-            print(f"{Colors.RED}Invalid concern ID.{Colors.RESET}")
-            return False
-        
-        concern = self.ethical_flags[concern_id]
-        if new_status not in ["pending", "resolved", "dismissed"]:
-            print(f"{Colors.YELLOW}Invalid status '{new_status}'.{Colors.RESET}")
-            return False
-
-        concern["status"] = new_status
-        concern["reviewed_by"] = reviewed_by
-        print(f"{Colors.BRIGHT_GREEN}Ethical concern {concern_id} updated to '{new_status}' by {reviewed_by}.{Colors.RESET}")
-        return True
 
 
 # --- Main Execution Block ---
