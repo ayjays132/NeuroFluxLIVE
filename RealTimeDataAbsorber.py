@@ -38,6 +38,7 @@ import faiss
 import psutil
 import gc
 from contextlib import contextmanager
+import random
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -768,7 +769,7 @@ class RealTimeDataAbsorber:
         try:
             # Sample recent data
             recent_data = list(self.data_buffer)[-self.batch_size * 2:]
-            batch_data = np.random.choice(recent_data, self.batch_size, replace=False)
+            batch_data = random.sample(recent_data, self.batch_size)
             
             # Prepare batch
             batch_inputs = defaultdict(list)
