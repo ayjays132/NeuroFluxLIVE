@@ -47,8 +47,8 @@ class PredictiveCodingTemporalModel(nn.Module):
                  context_window : int = 32,
                  dilations      : Tuple[int] = (1, 2, 4, 8),
                  transformer_depth: int = 2,
-                 lr             : float = 3e‑4,
-                 beta_kl        : float = 1e‑3,
+                 lr             : float = 3e-4,
+                 beta_kl        : float = 1e-3,
                  device         : str   = "cuda" if torch.cuda.is_available() else "cpu"):
         super().__init__()
         self.device          = device
@@ -100,10 +100,10 @@ class PredictiveCodingTemporalModel(nn.Module):
         x = self.transformer(x)                        # B, T, D
 
         # Pool last timestep
-        h = x[:, ‑1]                                   # B, D
+        h = x[:, -1]                                   # B, D
 
         # 3) latent reparam
-        mu, logvar = self.mu(h), self.log(h).clamp(‑10, 10)
+        mu, logvar = self.mu(h), self.log(h).clamp(-10, 10)
         std   = torch.exp(0.5 * logvar)
         z     = mu + std * torch.randn_like(std)
 
@@ -124,17 +124,17 @@ class PredictiveCodingTemporalModel(nn.Module):
             return embedding, 0.0
 
         # build context tensor
-        ctx = torch.stack(list(itertools.islice(self.buffer, len(self.buffer)‑self.context_window, len(self.buffer)))) # T,D
+        ctx = torch.stack(list(itertools.islice(self.buffer, len(self.buffer)-self.context_window, len(self.buffer)))) # T,D
         ctx = ctx.unsqueeze(0).to(self.device)             # 1,T,D
 
         pred, mu, logvar = self.forward(ctx)
-        err = torch.mean((embedding ‑ pred.detach())**2).item()
+        err = torch.mean((embedding - pred.detach())**2).item()
 
         # ─ store for optimisation ─ #
         if not hasattr(self, "_loss_terms"):
             self._loss_terms : List[torch.Tensor] = []
-        recon = torch.mean((embedding ‑ pred)**2)
-        kl    = ‑0.5 * torch.mean(1 + logvar ‑ mu.pow(2) ‑ logvar.exp())
+        recon = torch.mean((embedding - pred)**2)
+        kl    = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         self._loss_terms.append(recon + self.beta_kl * kl)
 
         # Fisher diag update (online) for plasticity regularisation
@@ -162,7 +162,7 @@ class PredictiveCodingTemporalModel(nn.Module):
         for p in self.parameters():
             sz = p.numel()
             fisher_slice = self.fisher[offset:offset+sz].view_as(p)
-            loss += 1e‑4 * torch.sum(fisher_slice * p**2)
+            loss += 1e-4 * torch.sum(fisher_slice * p**2)
             offset += sz
 
         self.opt.zero_grad(set_to_none=True)
