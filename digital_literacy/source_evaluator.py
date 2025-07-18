@@ -85,14 +85,13 @@ class SourceEvaluator:
         # --- Zero-Shot Classifier (BART Large MNLI) ---
         log.info(f"{Colors.YELLOW}⚙️  Loading zero-shot classifier (facebook/bart-large-mnli)...{Colors.RESET}")
         try:
-            # Explicitly load tokenizer and model using Auto components for zero-shot
             self.zero_shot_tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-mnli")
-            self.zero_shot_model = AutoModelForSequenceClassification.from_pretrained("distilbert/distilbert-base-uncased-finetuned-sst-2-english")
-            self.zero_shot_model.to(self.device) # Move model to device
+            self.zero_shot_model = AutoModelForSequenceClassification.from_pretrained("facebook/bart-large-mnli")
+            self.zero_shot_model.to(self.device)
             self.zero_shot_classifier = pipeline(
-                "sentiment-analysis",
-                model=self.sentiment_model,
-                tokenizer=self.sentiment_tokenizer,
+                "zero-shot-classification",
+                model=self.zero_shot_model,
+                tokenizer=self.zero_shot_tokenizer,
                 device=pipeline_device_id
             )
             log.info(f"{Colors.GREEN}✅ Zero-shot classifier loaded.{Colors.RESET}")
