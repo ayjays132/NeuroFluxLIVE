@@ -22,3 +22,4 @@ tqdm
 torchvision
 lmdb
 msgpack
+websockets

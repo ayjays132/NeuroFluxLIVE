@@ -42,6 +42,8 @@ import random
 import warnings
 warnings.filterwarnings('ignore')
 
+from interface.ws_server import run_ws_server
+
 @dataclass
 class DataPoint:
     """Represents a single data point with metadata"""
@@ -539,7 +541,19 @@ class AdaptiveNeuralNetwork(nn.Module):
         return self.encoders[modality](data)
 
 class RealTimeDataAbsorber:
-    """Main class for real-time data absorption and learning"""
+    """Main class for real-time data absorption and learning.
+
+    Args:
+        model_config: Model initialization parameters.
+        settings: Optional configuration overrides.
+        learning_rate: Initial optimizer learning rate.
+        buffer_size: Maximum number of recent datapoints to keep.
+        batch_size: Mini-batch size for online updates.
+        update_frequency: Steps between model updates.
+        adaptation_threshold: Signal threshold for adaptive behaviour.
+        metrics_queue: Optional queue used to stream performance metrics to
+            external consumers (e.g., the WebSocket server).
+    """
 
     def __init__(self,
                  model_config: Dict[str, Any],
@@ -548,8 +562,9 @@ class RealTimeDataAbsorber:
                  buffer_size: int = 10000,
                  batch_size: int = 32,
                  update_frequency: int = 100,
-                 adaptation_threshold: float = 0.7):
-
+                 adaptation_threshold: float = 0.7,
+                 metrics_queue: Optional[Queue] = None):
+        
         if settings:
             learning_rate = settings.get("learning_rate", learning_rate)
             buffer_size = settings.get("buffer_size", buffer_size)
@@ -595,6 +610,9 @@ class RealTimeDataAbsorber:
         self.is_running = False
         self.processing_thread = None
         self.learning_thread = None
+
+        # Queue for streaming metrics
+        self.metrics_queue = metrics_queue
         
         # Performance tracking
         self.performance_metrics = {
@@ -607,8 +625,16 @@ class RealTimeDataAbsorber:
         
         # Database for persistence
         self._init_database()
-        
+
         logging.info("RealTimeDataAbsorber initialized")
+
+    def _emit_metrics(self) -> None:
+        """Send current metrics to the queue if provided."""
+        if self.metrics_queue is not None:
+            try:
+                self.metrics_queue.put_nowait(self.performance_metrics.copy())
+            except Exception:
+                pass
     
     def _init_database(self):
         """Initialize database for storing learning events"""
@@ -693,8 +719,9 @@ class RealTimeDataAbsorber:
             # Add learning events to queue
             for event in events:
                 self.learning_events.put((-event.learning_signal, event))  # Negative for priority
-            
+
             self.performance_metrics["total_processed"] += 1
+            self._emit_metrics()
             
         except Exception as e:
             logging.error(f"Error absorbing data: {e}")
@@ -716,8 +743,9 @@ class RealTimeDataAbsorber:
                 # Periodic model updates
                 if self.processed_count % self.update_frequency == 0:
                     self._update_model()
-                
+
                 self.processed_count += 1
+                self._emit_metrics()
                 time.sleep(0.01)  # Small delay to prevent overwhelming
                 
             except Exception as e:
@@ -733,6 +761,7 @@ class RealTimeDataAbsorber:
                 
                 if len(recent_data) >= self.batch_size:
                     self._perform_online_learning(recent_data)
+                    self._emit_metrics()
                 
                 # Clean up old data periodically
                 if len(self.data_buffer) > self.buffer_size * 0.9:
@@ -763,12 +792,13 @@ class RealTimeDataAbsorber:
             
             elif event.event_type == "concept_drift":
                 logging.info(f"Concept drift detected: {event.metadata}")
-                
+
                 if event.adaptation_required:
                     self._adapt_to_drift(event)
-            
+
             # Store event in database
             self._store_learning_event(event)
+            self._emit_metrics()
             
         except Exception as e:
             logging.error(f"Error handling learning event: {e}")
@@ -886,6 +916,7 @@ class RealTimeDataAbsorber:
             logging.info(f"Adapted to anomaly in modality '{dp.modality}'.")
 
         self.performance_metrics["adaptations_made"] += 1
+        self._emit_metrics()
 
     def _adapt_to_drift(self, event: LearningEvent):
         """Adjust learning rate & maybe increase update frequency."""
@@ -894,12 +925,14 @@ class RealTimeDataAbsorber:
         self.optimizer.param_groups[0]["lr"] *= 1.2
         self.performance_metrics["learning_rate_current"] = self.optimizer.param_groups[0]["lr"]
         logging.info("Concept-drift adaptation: learning-rate boosted.")
+        self._emit_metrics()
 
     def _reinforce_pattern(self, event: LearningEvent):
         """Optionally lower LR to consolidate stable patterns."""
         self.optimizer.param_groups[0]["lr"] *= 0.95
         self.performance_metrics["learning_rate_current"] = self.optimizer.param_groups[0]["lr"]
         logging.debug("Stable pattern detected ⇒ LR slightly decayed.")
+        self._emit_metrics()
 
     # --------------------------------------------------------------------- #
     # HOUSE-KEEPING
@@ -963,7 +996,11 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    absorber = RealTimeDataAbsorber(model_config={})
+    metrics_q = Queue()
+    ws_thread = threading.Thread(target=run_ws_server, args=(metrics_q,), daemon=True)
+    ws_thread.start()
+
+    absorber = RealTimeDataAbsorber(model_config={}, metrics_queue=metrics_q)
     absorber.start_absorption()
 
     try:
