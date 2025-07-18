@@ -47,3 +47,7 @@ class BayesianPromptOptimizer(PromptOptimizer):
         )
         best_prompt, _ = min(history, key=lambda x: x[1])
         return best_prompt
+
+# Backwards compatibility alias
+PromptBayesOptimizer = BayesianPromptOptimizer
+

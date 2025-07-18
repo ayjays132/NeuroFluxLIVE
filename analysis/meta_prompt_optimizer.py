@@ -125,7 +125,11 @@ class MetaPromptOptimizer(PromptOptimizer):
         self.device = self.device # Ensure self.device is consistent with base class
 
         _bandit_params = bandit_params if bandit_params is not None else {"iterations": 5, "epsilon": 0.2}
-        _annealer_params = annealer_params if annealer_params is not None else {"initial_temp": 1.0, "cooling_rate": 0.95, "steps": 5}
+        _annealer_params = (
+            annealer_params
+            if annealer_params is not None
+            else {"temperature": 1.0, "cooling": 0.95, "steps": 5}
+        )
         _rl_params = rl_params if rl_params is not None else {"episodes": 5, "epsilon": 0.1}
 
         try:
@@ -162,6 +166,9 @@ class MetaPromptOptimizer(PromptOptimizer):
         
         log.info(f"{Colors.BLUE}MetaPromptOptimizer fully initialized and ready.{Colors.RESET}")
 
+    def _is_safe_and_relevant(self, prompt: str) -> bool:
+        """Placeholder safety check used in tests."""
+        return bool(prompt.strip())
 
     def optimize_prompt(self, base_prompt: str, n_variations: int = 5) -> str:
         """
