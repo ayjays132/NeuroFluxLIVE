@@ -1,0 +1,6 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="60" cy="60" r="50" fill="#7649fe">
+    <animate attributeName="r" from="40" to="50" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="60" cy="60" r="30" fill="#fff"/>
+</svg>

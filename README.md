@@ -263,7 +263,10 @@ pytest
 
 The `requirements.txt` file pins a CPU-only build of PyTorch so tests run even
 without a GPU.
+## Web Frontend Demo
+A minimal TypeScript demo is available in the `web` directory. Open `index.html` in a modern browser to try it. The page loads ambient audio and uses an animated SVG icon for both the favicon and main logo.
 
 
 ## License
 This repository is provided for research and experimentation purposes only.
+
