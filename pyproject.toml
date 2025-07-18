@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SelfResearch"
+version = "0.0.1"
+requires-python = ">=3.10"
+
+# ------------------------------------------------------------------
+# Tell setuptools that the *current folder* (“.”) IS the package.
+# ------------------------------------------------------------------
+[tool.setuptools]
+packages = ["SelfResearch"]
+package-dir = { "SelfResearch" = "" }   #  ← key fix

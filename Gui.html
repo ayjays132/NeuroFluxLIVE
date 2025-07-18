@@ -1,0 +1,955 @@
+import React, { useState, useEffect, useRef } from 'react';
+
+// Main App Component
+const App = () => {
+  const [dataset, setDataset] = useState(null);
+  const [modelStatus, setModelStatus] = useState('Idle');
+  const [evaluationResults, setEvaluationResults] = useState(null);
+  const [modelOutput, setModelOutput] = useState([]);
+  const [modelFeedback, setModelFeedback] = useState('');
+  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode (black theme)
+  const [chainOfThought, setChainOfThought] = useState([]); // For AGI-like thinking
+  const [dataQualityScore, setDataQualityScore] = useState(null); // New state for data quality
+  const [isAnalyzingDataQuality, setIsAnalyzingDataQuality] = useState(false); // New state for data quality analysis loading
+
+  // State to control section readiness
+  const [datasetLoaded, setDatasetLoaded] = useState(false);
+  const [modelTrained, setModelTrained] = useState(false);
+  const [modelEvaluated, setModelEvaluated] = useState(false);
+
+  // Refs for scrolling to sections
+  const dataRef = useRef(null);
+  const visualizeRef = useRef(null);
+  const modelRef = useRef(null);
+  const evaluateRef = useRef(null);
+  const chainOfThoughtRef = useRef(null); // Ref for Chain of Thought scroll
+
+  // Scroll to bottom of Chain of Thought when new thoughts appear
+  useEffect(() => {
+    if (chainOfThoughtRef.current) {
+      chainOfThoughtRef.current.scrollTop = chainOfThoughtRef.current.scrollHeight;
+    }
+  }, [chainOfThought]);
+
+  // Theme classes based on mode (Black & White with purple/indigo accents)
+  const themeClasses = {
+    bg: isDarkMode ? 'bg-black' : 'bg-white',
+    text: isDarkMode ? 'text-gray-100' : 'text-gray-900',
+    headerBg: isDarkMode ? 'bg-gray-950' : 'bg-gray-50', // Stricter B&W
+    sidebarBg: isDarkMode ? 'bg-gray-900' : 'bg-gray-100',
+    sidebarButtonActive: isDarkMode ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white',
+    sidebarButtonInactive: isDarkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800',
+    cardBg: isDarkMode ? 'bg-gray-900/80' : 'bg-white/80', // Semi-transparent for layered effect
+    cardBorder: isDarkMode ? 'border-purple-700' : 'border-purple-300',
+    cardShadow: isDarkMode ? 'shadow-2xl' : 'shadow-xl',
+    innerCardBg: isDarkMode ? 'bg-gray-800/80' : 'bg-gray-100/80', // Semi-transparent for layered effect
+    innerCardBorder: isDarkMode ? 'border-gray-700' : 'border-gray-200',
+    inputBg: isDarkMode ? 'bg-gray-800' : 'bg-gray-50', // Stricter B&W
+    inputText: isDarkMode ? 'text-gray-100' : 'text-gray-900',
+    inputBorder: isDarkMode ? 'border-gray-600' : 'border-gray-300',
+    primaryButtonBg: isDarkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600',
+    secondaryButtonBg: isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-500 hover:bg-indigo-600',
+    successButtonBg: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600',
+    infoButtonBg: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+    disabledOpacity: 'opacity-50',
+    accentText: isDarkMode ? 'text-purple-300' : 'text-purple-700',
+    subtleText: isDarkMode ? 'text-gray-400' : 'text-gray-500',
+    strongText: isDarkMode ? 'text-white' : 'text-gray-900',
+    outputBg: isDarkMode ? 'bg-gray-800' : 'bg-gray-100', // Stricter B&W
+    outputBorder: isDarkMode ? 'border-gray-600' : 'border-gray-300',
+    outputAccentText: isDarkMode ? 'text-purple-200' : 'text-purple-800',
+    outputSuccessText: isDarkMode ? 'text-green-300' : 'text-green-700',
+    tableHeaderBg: isDarkMode ? 'bg-gray-800' : 'bg-gray-100', // Stricter B&W
+    tableRowHover: isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-150', // Stricter B&W
+    glowEffect: isDarkMode ? 'shadow-purple-500/50' : 'shadow-purple-300/50', // Subtle glow
+  };
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  // Function to scroll to a ref
+  const scrollToSection = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Simulate data loading
+  const handleLoadData = (dataString) => {
+    try {
+      let parsedData;
+      if (dataString.trim().startsWith('{') || dataString.trim().startsWith('[')) {
+        parsedData = JSON.parse(dataString);
+      } else {
+        const lines = dataString.split('\n').filter(line => line.trim() !== '');
+        if (lines.length > 0) {
+          const headers = lines[0].split(',').map(h => h.trim());
+          parsedData = lines.slice(1).map(line => {
+            const values = line.split(',').map(v => v.trim());
+            return headers.reduce((obj, header, index) => {
+              obj[header] = isNaN(Number(values[index])) ? values[index] : Number(values[index]);
+              return obj;
+            }, {});
+          });
+        } else {
+          parsedData = [];
+        }
+      }
+      setDataset(parsedData);
+      setDatasetLoaded(true);
+      setDataQualityScore(null); // Reset data quality on new load
+      scrollToSection(visualizeRef); // Scroll to visualizer after loading
+      console.log('Dataset loaded:', parsedData);
+    } catch (error) {
+      console.error('Error parsing data:', error);
+      alert('Error loading data. Please ensure it\'s valid CSV or JSON format.');
+    }
+  };
+
+  // Simulate data quality analysis
+  const handleAnalyzeDataQuality = () => {
+    if (!datasetLoaded) {
+      alert('Please load a dataset first to analyze its quality!');
+      return;
+    }
+    setIsAnalyzingDataQuality(true);
+    setDataQualityScore(null); // Clear previous score
+    setTimeout(() => {
+      const score = (Math.random() * 20 + 80).toFixed(1); // 80.0 to 100.0
+      setDataQualityScore(parseFloat(score));
+      setIsAnalyzingDataQuality(false);
+      console.log('Data quality analyzed:', score);
+    }, 2000);
+  };
+
+
+  // Simulate model training/processing with Chain of Thought
+  const handleTrainModel = () => {
+    if (!datasetLoaded) {
+      alert('Please load a dataset first!');
+      return;
+    }
+    setModelStatus('Training in progress...');
+    setChainOfThought([]); // Clear previous thoughts
+    setModelTrained(false); // Reset trained status
+
+    let thoughtIndex = 0;
+    const thoughts = [
+      "01. Initiating data integrity check and anomaly detection...",
+      "02. Pre-processing raw sensor inputs: Normalization & Scaling...",
+      "03. Dynamically allocating computational resources for neural core...",
+      "04. Constructing multi-modal feature vectors from sensory streams...",
+      "05. Commencing iterative learning cycles (Epoch 1/10): Exploring solution space...",
+      "06. Adjusting internal weights based on real-time environmental feedback...",
+      "07. Optimizing for multi-objective performance: Accuracy, Latency, Energy Efficiency...",
+      "08. Self-correcting via reinforcement learning signals from task completion...",
+      "09. Refining decision boundaries with simulated adversarial scenarios...",
+      "10. Converging towards optimal policy and finalizing model parameters for deployment."
+    ];
+
+    const interval = setInterval(() => {
+      if (thoughtIndex < thoughts.length) {
+        setChainOfThought(prev => [...prev, thoughts[thoughtIndex]]);
+        thoughtIndex++;
+      } else {
+        clearInterval(interval);
+        setModelStatus('Training Complete');
+        const simulatedOutput = dataset.map((row, index) => ({
+          id: index,
+          input: JSON.stringify(row),
+          prediction: Math.random() > 0.5 ? 'Class A' : 'Class B',
+          confidence: (Math.random() * 0.4 + 0.6).toFixed(2)
+        }));
+        setModelOutput(simulatedOutput);
+        setModelTrained(true);
+        scrollToSection(modelRef); // Scroll to model section
+        console.log('Model trained. Simulated output:', simulatedOutput);
+      }
+    }, 800); // Simulate thoughts appearing every 0.8 seconds
+  };
+
+  // Simulate model evaluation
+  const handleEvaluateModel = () => {
+    if (!modelTrained) {
+      alert('Please train the model first to get output to evaluate!');
+      return;
+    }
+    setModelStatus('Evaluating...');
+    setModelEvaluated(false); // Reset evaluated status
+    setTimeout(() => {
+      const accuracy = (Math.random() * 0.2 + 0.75).toFixed(2);
+      const precision = (Math.random() * 0.2 + 0.7).toFixed(2);
+      const recall = (Math.random() * 0.2 + 0.7).toFixed(2);
+      setEvaluationResults({ accuracy, precision, recall });
+      setModelStatus('Evaluation Complete');
+      setModelEvaluated(true);
+      scrollToSection(evaluateRef); // Scroll to evaluation section
+      console.log('Model evaluated:', { accuracy, precision, recall });
+    }, 2500);
+  };
+
+  // Simulate LLM call for model feedback
+  const handleGenerateFeedback = async () => {
+    if (!modelEvaluated) {
+      alert('Please evaluate the model first!');
+      return;
+    }
+    setModelFeedback('Generating AI feedback...');
+    try {
+      const prompt = `Based on these evaluation results: Accuracy=${evaluationResults.accuracy}, Precision=${evaluationResults.precision}, Recall=${evaluationResults.recall}. Provide a concise, insightful analysis of the model's performance and suggest one area for improvement. Focus on a robot's learning context.`;
+      let chatHistory = [];
+      chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+      const payload = { contents: chatHistory };
+      const apiKey = ""; // Canvas will provide this at runtime
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+
+      if (result.candidates && result.candidates.length > 0 &&
+          result.candidates[0].content && result.candidates[0].content.parts &&
+          result.candidates[0].content.parts.length > 0) {
+        const text = result.candidates[0].content.parts[0].text;
+        setModelFeedback(text);
+      } else {
+        setModelFeedback('Failed to generate AI feedback: Unexpected API response.');
+      }
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      setModelFeedback('Failed to generate AI feedback: Network error or API issue.');
+    }
+  };
+
+
+  return (
+    <div className={`flex flex-col h-screen ${themeClasses.bg} ${themeClasses.text} font-inter transition-colors duration-500`}>
+      {/* Header */}
+      <Header themeClasses={themeClasses} toggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - now for navigation and status */}
+        <Sidebar
+          themeClasses={themeClasses}
+          modelStatus={modelStatus}
+          scrollToSection={scrollToSection}
+          refs={{ dataRef, visualizeRef, modelRef, evaluateRef }}
+          datasetLoaded={datasetLoaded}
+          modelTrained={modelTrained}
+          modelEvaluated={modelEvaluated}
+        />
+
+        {/* Main Content Area - All sections rendered sequentially */}
+        <div className="flex-1 p-8 overflow-y-auto relative z-0">
+          {/* Layered background effects */}
+          <div className={`absolute inset-0 rounded-3xl ${isDarkMode ? 'bg-gray-800/20 backdrop-blur-sm' : 'bg-gray-200/20 backdrop-blur-sm'} z-[-1] m-4`}></div>
+          <div className={`absolute inset-0 rounded-3xl ${isDarkMode ? 'bg-gray-800/10 backdrop-blur-sm' : 'bg-gray-200/10 backdrop-blur-sm'} z-[-2] m-8`}></div>
+          <div className={`absolute inset-0 rounded-3xl ${isDarkMode ? 'bg-gray-800/5 backdrop-blur-sm' : 'bg-gray-200/5 backdrop-blur-sm'} z-[-3] m-12`}></div>
+
+
+          <div className="relative z-10 space-y-12 pb-12"> {/* Added space-y for separation */}
+            <section id="data-ingestion" ref={dataRef}>
+              <DataLoader
+                onLoadData={handleLoadData}
+                themeClasses={themeClasses}
+                dataQualityScore={dataQualityScore}
+                onAnalyzeDataQuality={handleAnalyzeDataQuality}
+                isAnalyzingDataQuality={isAnalyzingDataQuality}
+                datasetLoaded={datasetLoaded}
+              />
+            </section>
+
+            <section id="data-visualizer" ref={visualizeRef}>
+              <DataVisualizer
+                dataset={dataset}
+                themeClasses={themeClasses}
+                datasetLoaded={datasetLoaded}
+                dataQualityScore={dataQualityScore}
+              />
+            </section>
+
+            <section id="model-operations" ref={modelRef}>
+              <ModelInteraction
+                modelStatus={modelStatus}
+                onTrainModel={handleTrainModel}
+                onEvaluateModel={handleEvaluateModel}
+                modelOutput={modelOutput}
+                themeClasses={themeClasses}
+                chainOfThought={chainOfThought}
+                datasetLoaded={datasetLoaded}
+                modelTrained={modelTrained}
+                chainOfThoughtRef={chainOfThoughtRef}
+              />
+            </section>
+
+            <section id="self-evaluation" ref={evaluateRef}>
+              <ModelEvaluator
+                evaluationResults={evaluationResults}
+                modelFeedback={modelFeedback}
+                onGenerateFeedback={handleGenerateFeedback}
+                themeClasses={themeClasses}
+                modelEvaluated={modelEvaluated}
+              />
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Header Component
+const Header = ({ themeClasses, toggleDarkMode, isDarkMode }) => (
+  <header className={`${themeClasses.headerBg} p-4 shadow-lg flex items-center justify-between rounded-b-xl relative z-20`}>
+    <h1 className="text-3xl font-extrabold text-white tracking-wide">
+      <span className="text-purple-300">Aether</span>Mind GUI
+    </h1>
+    <div className="flex items-center space-x-4">
+      <span className="text-sm text-gray-300">Status: Online</span>
+      <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+      <button
+        onClick={toggleDarkMode}
+        className="p-2 rounded-full bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      >
+        {isDarkMode ? '☀️' : '🌙'}
+      </button>
+    </div>
+  </header>
+);
+
+// Sidebar Component (Simplified for navigation and status)
+const Sidebar = ({ themeClasses, modelStatus, scrollToSection, refs, datasetLoaded, modelTrained, modelEvaluated }) => {
+  const getStatusIcon = (isReady) => {
+    if (isReady) return '✅';
+    if (modelStatus.includes('Training') || modelStatus.includes('Evaluating')) return '⏳';
+    return '⚪';
+  };
+
+  return (
+    <aside className={`w-64 ${themeClasses.sidebarBg} p-6 flex flex-col space-y-4 ${themeClasses.cardShadow} rounded-r-xl relative z-10`}>
+      <nav className="flex flex-col space-y-2">
+        <SidebarButton
+          label="Data Ingestion"
+          icon="📊"
+          onClick={() => scrollToSection(refs.dataRef)}
+          statusIcon={getStatusIcon(datasetLoaded)}
+          themeClasses={themeClasses}
+        />
+        <SidebarButton
+          label="Data Visualizer"
+          icon="📈"
+          onClick={() => scrollToSection(refs.visualizeRef)}
+          statusIcon={getStatusIcon(datasetLoaded)} // Visualizer depends on data loaded
+          themeClasses={themeClasses}
+        />
+        <SidebarButton
+          label="Model Operations"
+          icon="🧠"
+          onClick={() => scrollToSection(refs.modelRef)}
+          statusIcon={getStatusIcon(modelTrained)}
+          themeClasses={themeClasses}
+        />
+        <SidebarButton
+          label="Self-Evaluation"
+          icon="✨"
+          onClick={() => scrollToSection(refs.evaluateRef)}
+          statusIcon={getStatusIcon(modelEvaluated)}
+          themeClasses={themeClasses}
+        />
+      </nav>
+      <div className={`mt-auto p-4 ${themeClasses.innerCardBg} rounded-lg shadow-inner text-center`}>
+        <p className={`text-sm ${themeClasses.subtleText}`}>Model State:</p>
+        <p className={`text-lg font-semibold ${themeClasses.accentText}`}>{modelStatus}</p>
+      </div>
+    </aside>
+  );
+};
+
+// Sidebar Button Component (Updated for status icon)
+const SidebarButton = ({ label, icon, onClick, statusIcon, themeClasses }) => (
+  <button
+    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 text-gray-300 hover:bg-gray-700 hover:text-white
+      ${themeClasses.sidebarButtonInactive} focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75`}
+    onClick={onClick}
+  >
+    <div className="flex items-center space-x-3">
+      <span className="text-xl">{icon}</span>
+      <span className="font-medium">{label}</span>
+    </div>
+    <span className="text-lg">{statusIcon}</span>
+  </button>
+);
+
+// Data Loader Component
+const DataLoader = ({ onLoadData, themeClasses, dataQualityScore, onAnalyzeDataQuality, isAnalyzingDataQuality, datasetLoaded }) => {
+  const [dataInput, setDataInput] = useState('');
+
+  const handlePasteExample = () => {
+    setDataInput(`Name,Age,City,Score
+Alice,30,New York,85
+Bob,24,Los Angeles,92
+Charlie,35,Chicago,78
+Diana,28,Houston,95
+Eve,22,Miami,88`);
+  };
+
+  const getDataQualityStatus = (score) => {
+    if (score === null) return { text: 'N/A', color: themeClasses.subtleText };
+    if (score >= 95) return { text: 'Excellent', color: 'text-green-500' };
+    if (score >= 85) return { text: 'Good', color: 'text-yellow-500' };
+    return { text: 'Needs Review', color: 'text-red-500' };
+  };
+
+  const qualityStatus = getDataQualityStatus(dataQualityScore);
+
+  return (
+    <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border`}>
+      <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Data Ingestion Module <span className="text-purple-400">// Input & Prepare</span></h2>
+      <p className={`${themeClasses.subtleText} mb-6`}>
+        Paste your dataset (CSV or JSON format) below for dynamic visualization and model processing.
+      </p>
+      <textarea
+        className={`w-full h-48 p-4 ${themeClasses.inputBg} ${themeClasses.inputText} rounded-lg ${themeClasses.inputBorder} border focus:border-purple-500 focus:ring focus:ring-purple-500 focus:ring-opacity-50 resize-y font-mono`}
+        placeholder={`Example CSV:\nName,Age,City,Score\nAlice,30,New York,85\n\nExample JSON:\n[{"name": "Alice", "age": 30}]`}
+        value={dataInput}
+        onChange={(e) => setDataInput(e.target.value)}
+      ></textarea>
+      <div className="flex justify-end space-x-4 mt-6">
+        <button
+          className={`px-6 py-3 ${themeClasses.secondaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75`}
+          onClick={handlePasteExample}
+        >
+          Paste Example CSV
+        </button>
+        <button
+          className={`px-8 py-3 ${themeClasses.primaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75`}
+          onClick={() => onLoadData(dataInput)}
+        >
+          Load Dataset
+        </button>
+      </div>
+
+      {datasetLoaded && (
+        <div className={`mt-8 ${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Data Quality Analysis</h3>
+          <div className="flex items-center justify-between mb-4">
+            <span className={`${themeClasses.strongText} text-lg`}>Overall Quality Score:</span>
+            {isAnalyzingDataQuality ? (
+              <span className={`${themeClasses.subtleText} animate-pulse`}>Analyzing...</span>
+            ) : (
+              <span className={`font-bold text-2xl ${qualityStatus.color}`}>
+                {dataQualityScore !== null ? `${dataQualityScore}%` : 'N/A'}
+              </span>
+            )}
+          </div>
+          <p className={`${themeClasses.subtleText} mb-4`}>Status: <span className={`${qualityStatus.color} font-semibold`}>{qualityStatus.text}</span></p>
+          <button
+            className={`w-full px-8 py-3 ${themeClasses.infoButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 ${isAnalyzingDataQuality ? themeClasses.disabledOpacity : ''}`}
+            onClick={onAnalyzeDataQuality}
+            disabled={isAnalyzingDataQuality}
+          >
+            {isAnalyzingDataQuality ? 'Analyzing Data...' : 'Analyze Data Quality'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Data Visualizer Component
+const DataVisualizer = ({ dataset, themeClasses, datasetLoaded, dataQualityScore }) => {
+  const [selectedChartType, setSelectedChartType] = useState('table');
+  const [selectedXAxis, setSelectedXAxis] = useState('');
+  const [selectedYAxis, setSelectedYAxis] = useState('');
+
+  useEffect(() => {
+    if (dataset && dataset.length > 0) {
+      const numericCols = Object.keys(dataset[0]).filter(col => typeof dataset[0][col] === 'number');
+      if (numericCols.length >= 2) {
+        setSelectedXAxis(numericCols[0]);
+        setSelectedYAxis(numericCols[1]);
+      } else if (numericCols.length === 1) {
+        setSelectedXAxis(numericCols[0]);
+        setSelectedYAxis('');
+      } else {
+        setSelectedXAxis('');
+        setSelectedYAxis('');
+      }
+    }
+  }, [dataset]);
+
+  if (!datasetLoaded) {
+    return (
+      <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border text-center opacity-70`}>
+        <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Data Visualizer <span className="text-purple-400">// Understand Data</span></h2>
+        <p className={`${themeClasses.subtleText}`}>Load a dataset in the "Data Ingestion" module to enable visualization.</p>
+      </div>
+    );
+  }
+
+  const columns = dataset.length > 0 ? Object.keys(dataset[0]) : [];
+  const numericColumns = columns.filter(col => typeof dataset[0][col] === 'number');
+  const categoricalColumns = columns.filter(col => typeof dataset[0][col] === 'string');
+
+  // Helper for rendering chart types
+  const renderChart = () => {
+    switch (selectedChartType) {
+      case 'table':
+        return renderTableView(dataset, columns);
+      case 'bar':
+        return renderBarChart(dataset, numericColumns[0]);
+      case 'scatter':
+        return renderSimulatedScatterPlot(dataset, selectedXAxis, selectedYAxis);
+      case 'line':
+        return renderSimulatedLineGraph(dataset, selectedXAxis, selectedYAxis);
+      case 'categorical':
+        return renderCategoricalDistribution(dataset, categoricalColumns);
+      default:
+        return <p className={`${themeClasses.subtleText} mt-4`}>Select a chart type to visualize your data.</p>;
+    }
+  };
+
+  // Simple Bar Chart Visualization
+  const renderBarChart = (data, column) => {
+    if (!data || data.length === 0 || !column || !numericColumns.includes(column)) {
+      return <p className={`${themeClasses.subtleText} mt-4`}>Select a numeric column for the bar chart.</p>;
+    }
+
+    const values = data.map(row => row[column]);
+    const maxVal = Math.max(...values);
+
+    return (
+      <div className="mt-8">
+        <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Bar Chart: {column} Distribution</h3>
+        <div className={`flex items-end h-48 ${themeClasses.innerCardBg} rounded-lg p-2 space-x-1 overflow-x-auto shadow-inner`}>
+          {values.map((val, index) => (
+            <div
+              key={index}
+              className={`flex-shrink-0 w-8 ${themeClasses.primaryButtonBg.split(' ')[0].replace('bg-', 'bg-')}-500 rounded-t-md relative group transition-all duration-300 hover:scale-y-105`}
+              style={{ height: `${(val / maxVal) * 90 + 10}%` }} // Min height for visibility
+            >
+              <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-xs ${themeClasses.strongText} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
+                {val}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Simulated Scatter Plot
+  const renderSimulatedScatterPlot = (data, xCol, yCol) => {
+    if (!data || data.length === 0 || !xCol || !yCol || !numericColumns.includes(xCol) || !numericColumns.includes(yCol)) {
+      return <p className={`${themeClasses.subtleText} mt-4`}>Select two numeric columns for the scatter plot.</p>;
+    }
+
+    const xValues = data.map(row => row[xCol]);
+    const yValues = data.map(row => row[yCol]);
+    const maxX = Math.max(...xValues);
+    const maxY = Math.max(...yValues);
+    const minX = Math.min(...xValues);
+    const minY = Math.min(...yValues);
+
+    return (
+      <div className="mt-8">
+        <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Simulated Scatter Plot: {xCol} vs {yCol}</h3>
+        <div className={`relative w-full h-64 ${themeClasses.innerCardBg} rounded-lg shadow-inner overflow-hidden`}>
+          {data.map((row, index) => {
+            const xPos = ((row[xCol] - minX) / (maxX - minX)) * 90 + 5; // 5-95% range
+            const yPos = ((row[yCol] - minY) / (maxY - minY)) * 90 + 5; // 5-95% range
+            return (
+              <div
+                key={index}
+                className={`absolute w-3 h-3 rounded-full ${themeClasses.secondaryButtonBg.split(' ')[0].replace('bg-', 'bg-')}-400 transition-all duration-300 hover:scale-150`}
+                style={{ left: `${xPos}%`, bottom: `${yPos}%` }}
+                title={`${xCol}: ${row[xCol]}, ${yCol}: ${row[yCol]}`}
+              ></div>
+            );
+          })}
+          <div className={`absolute bottom-2 left-2 text-xs ${themeClasses.subtleText}`}>{xCol}</div>
+          <div className={`absolute top-2 right-2 text-xs ${themeClasses.subtleText}`}>{yCol}</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Simulated Line Graph
+  const renderSimulatedLineGraph = (data, xCol, yCol) => {
+    if (!data || data.length === 0 || !xCol || !yCol || !numericColumns.includes(xCol) || !numericColumns.includes(yCol)) {
+      return <p className={`${themeClasses.subtleText} mt-4`}>Select two numeric columns for the line graph.</p>;
+    }
+
+    const sortedData = [...data].sort((a, b) => a[xCol] - b[xCol]);
+    const xValues = sortedData.map(row => row[xCol]);
+    const yValues = sortedData.map(row => row[yCol]);
+    const maxX = Math.max(...xValues);
+    const minX = Math.min(...xValues);
+    const maxY = Math.max(...yValues);
+    const minY = Math.min(...yValues);
+
+    // Generate SVG path for line
+    const points = sortedData.map((row, i) => {
+      const x = ((row[xCol] - minX) / (maxX - minX)) * 100;
+      const y = 100 - (((row[yCol] - minY) / (maxY - minY)) * 100); // Invert Y for SVG coordinates
+      return `${x},${y}`;
+    }).join(' ');
+
+    return (
+      <div className="mt-8">
+        <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Simulated Line Graph: {xCol} vs {yCol}</h3>
+        <div className={`relative w-full h-64 ${themeClasses.innerCardBg} rounded-lg shadow-inner overflow-hidden p-4`}>
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <polyline
+              fill="none"
+              stroke={themeClasses.primaryButtonBg.split(' ')[0].replace('bg-', 'stroke-') + '-500'}
+              strokeWidth="1"
+              points={points}
+            />
+            {sortedData.map((row, i) => {
+              const x = ((row[xCol] - minX) / (maxX - minX)) * 100;
+              const y = 100 - (((row[yCol] - minY) / (maxY - minY)) * 100);
+              return (
+                <circle
+                  key={i}
+                  cx={x}
+                  cy={y}
+                  r="1.5"
+                  fill={themeClasses.secondaryButtonBg.split(' ')[0].replace('bg-', 'fill-') + '-400'}
+                  className="transition-all duration-300 hover:scale-150"
+                >
+                  <title>{`${xCol}: ${row[xCol]}, ${yCol}: ${row[yCol]}`}</title>
+                </circle>
+              );
+            })}
+          </svg>
+          <div className={`absolute bottom-2 left-2 text-xs ${themeClasses.subtleText}`}>{xCol}</div>
+          <div className={`absolute top-2 right-2 text-xs ${themeClasses.subtleText}`}>{yCol}</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Categorical Distribution
+  const renderCategoricalDistribution = (data, cols) => {
+    if (!data || data.length === 0 || cols.length === 0) {
+      return <p className={`${themeClasses.subtleText} mt-4`}>No categorical columns found or dataset is empty.</p>;
+    }
+
+    return (
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {cols.map(col => {
+          const counts = {};
+          data.forEach(row => {
+            const value = row[col];
+            counts[value] = (counts[value] || 0) + 1;
+          });
+          const total = data.length;
+
+          return (
+            <div key={col} className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+              <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Distribution: {col}</h3>
+              <div className="space-y-2">
+                {Object.entries(counts).map(([value, count]) => (
+                  <div key={value} className="flex justify-between items-center text-sm">
+                    <span className={`${themeClasses.inputText}`}>{value}</span>
+                    <span className={`${themeClasses.subtleText}`}>{count} ({((count / total) * 100).toFixed(1)}%)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Simple Table View
+  const renderTableView = (data, columns) => (
+    <div className="mt-8 overflow-x-auto">
+      <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Raw Data Table</h3>
+      <div className={`${themeClasses.innerCardBg} rounded-lg shadow-inner`}>
+        <table className="min-w-full divide-y divide-gray-600">
+          <thead>
+            <tr>
+              {columns.map(col => (
+                <th key={col} className={`px-6 py-3 text-left text-xs font-medium ${themeClasses.subtleText} uppercase tracking-wider ${themeClasses.tableHeaderBg}`}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-300'}`}>
+            {data.map((row, rowIndex) => (
+              <tr key={rowIndex} className={`${themeClasses.tableRowHover} transition-colors duration-200`}>
+                {columns.map(col => (
+                  <td key={`${rowIndex}-${col}`} className={`px-6 py-4 whitespace-nowrap text-sm ${themeClasses.inputText}`}>
+                    {String(row[col])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border`}>
+      <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Data Visualizer <span className="text-purple-400">// Understand Data</span></h2>
+      <p className={`${themeClasses.subtleText} mb-4`}>
+        Explore your loaded dataset through various dynamic visualizations.
+      </p>
+
+      {dataset.length > 0 ? (
+        <>
+          <div className="mb-6">
+            <h3 className={`text-2xl font-semibold ${themeClasses.strongText} mb-2`}>Dataset Summary:</h3>
+            <p className={`${themeClasses.subtleText}`}>Rows: {dataset.length}</p>
+            <p className={`${themeClasses.subtleText}`}>Columns: {columns.length} ({columns.join(', ')})</p>
+          </div>
+
+          {dataQualityScore !== null && (
+            <div className={`mb-6 p-4 rounded-lg ${themeClasses.innerCardBg} ${themeClasses.innerCardBorder} border flex items-center justify-between shadow-md transition-all duration-300 ${themeClasses.glowEffect}`}>
+              <span className={`${themeClasses.strongText} text-lg`}>Data Quality Score:</span>
+              <span className={`font-bold text-3xl ${dataQualityScore >= 95 ? 'text-green-500' : dataQualityScore >= 85 ? 'text-yellow-500' : 'text-red-500'}`}>
+                {dataQualityScore}%
+              </span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-4 mb-6">
+            <button
+              className={`px-4 py-2 rounded-md font-semibold transition-all duration-300
+                ${selectedChartType === 'table' ? themeClasses.primaryButtonBg : `${themeClasses.innerCardBg} ${themeClasses.inputText} hover:${themeClasses.innerCardBg.replace('bg-', 'bg-opacity-75')} `}`}
+              onClick={() => setSelectedChartType('table')}
+            >
+              Table View
+            </button>
+            <button
+              className={`px-4 py-2 rounded-md font-semibold transition-all duration-300
+                ${selectedChartType === 'bar' ? themeClasses.primaryButtonBg : `${themeClasses.innerCardBg} ${themeClasses.inputText} hover:${themeClasses.innerCardBg.replace('bg-', 'bg-opacity-75')} `}`}
+              onClick={() => setSelectedChartType('bar')}
+            >
+              Bar Chart
+            </button>
+            <button
+              className={`px-4 py-2 rounded-md font-semibold transition-all duration-300
+                ${selectedChartType === 'scatter' ? themeClasses.primaryButtonBg : `${themeClasses.innerCardBg} ${themeClasses.inputText} hover:${themeClasses.innerCardBg.replace('bg-', 'bg-opacity-75')} `}`}
+              onClick={() => setSelectedChartType('scatter')}
+            >
+              Scatter Plot
+            </button>
+            <button
+              className={`px-4 py-2 rounded-md font-semibold transition-all duration-300
+                ${selectedChartType === 'line' ? themeClasses.primaryButtonBg : `${themeClasses.innerCardBg} ${themeClasses.inputText} hover:${themeClasses.innerCardBg.replace('bg-', 'bg-opacity-75')} `}`}
+              onClick={() => setSelectedChartType('line')}
+            >
+              Line Graph
+            </button>
+            {categoricalColumns.length > 0 && (
+              <button
+                className={`px-4 py-2 rounded-md font-semibold transition-all duration-300
+                  ${selectedChartType === 'categorical' ? themeClasses.primaryButtonBg : `${themeClasses.innerCardBg} ${themeClasses.inputText} hover:${themeClasses.innerCardBg.replace('bg-', 'bg-opacity-75')} `}`}
+                onClick={() => setSelectedChartType('categorical')}
+              >
+                Categorical Dist.
+              </button>
+            )}
+          </div>
+
+          {(selectedChartType === 'scatter' || selectedChartType === 'line') && numericColumns.length > 0 && (
+            <div className={`${themeClasses.innerCardBg} p-4 rounded-lg mb-4 flex flex-wrap gap-4 items-center`}>
+              <label className={`${themeClasses.inputText} text-sm`}>X-Axis:</label>
+              <select
+                className={`p-2 rounded-md ${themeClasses.inputBg} ${themeClasses.inputText} ${themeClasses.inputBorder} border`}
+                value={selectedXAxis}
+                onChange={(e) => setSelectedXAxis(e.target.value)}
+              >
+                <option value="">Select X-axis</option>
+                {numericColumns.map(col => <option key={col} value={col}>{col}</option>)}
+              </select>
+              <label className={`${themeClasses.inputText} text-sm`}>Y-Axis:</label>
+              <select
+                className={`p-2 rounded-md ${themeClasses.inputBg} ${themeClasses.inputText} ${themeClasses.inputBorder} border`}
+                value={selectedYAxis}
+                onChange={(e) => setSelectedYAxis(e.target.value)}
+              >
+                <option value="">Select Y-axis</option>
+                {numericColumns.map(col => <option key={col} value={col}>{col}</option>)}
+              </select>
+            </div>
+          )}
+
+          {renderChart()}
+
+        </>
+      ) : (
+        <p className={`${themeClasses.subtleText}`}>The loaded dataset is empty or could not be parsed.</p>
+      )}
+    </div>
+  );
+};
+
+// Model Interaction Component
+const ModelInteraction = ({ modelStatus, onTrainModel, onEvaluateModel, modelOutput, themeClasses, chainOfThought, datasetLoaded, modelTrained, chainOfThoughtRef }) => {
+  if (!datasetLoaded) {
+    return (
+      <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border text-center opacity-70`}>
+        <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Model Operations Center <span className="text-purple-400">// Train & Refine</span></h2>
+        <p className={`${themeClasses.subtleText}`}>Load a dataset to enable model operations.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border`}>
+      <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Model Operations Center <span className="text-purple-400">// Train & Refine</span></h2>
+      <p className={`${themeClasses.subtleText} mb-6`}>
+        Initiate model training, observe its actions, and utilize tools to enhance its performance.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Model Training & Inference</h3>
+          <p className={`${themeClasses.subtleText} mb-4`}>Current Status: <span className="font-bold text-green-400">{modelStatus}</span></p>
+          <button
+            className={`w-full px-8 py-3 ${themeClasses.successButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 ${modelStatus.includes('Training') ? themeClasses.disabledOpacity : ''}`}
+            onClick={onTrainModel}
+            disabled={modelStatus.includes('Training')}
+          >
+            {modelStatus.includes('Training') ? 'Training...' : 'Start Model Training'}
+          </button>
+          <button
+            className={`w-full mt-4 px-8 py-3 ${themeClasses.infoButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 ${(!modelTrained || modelStatus.includes('Training') || modelStatus.includes('Evaluating')) ? themeClasses.disabledOpacity : ''}`}
+            onClick={onEvaluateModel}
+            disabled={!modelTrained || modelStatus.includes('Training') || modelStatus.includes('Evaluating')}
+          >
+            {modelStatus.includes('Evaluating') ? 'Evaluating...' : 'Evaluate Model Performance'}
+          </button>
+        </div>
+
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Coherence & Ability Tools</h3>
+          <p className={`${themeClasses.subtleText} mb-4`}>
+            These tools simulate boosting model performance and refining its output.
+          </p>
+          <div className="space-y-4">
+            <button className={`w-full px-6 py-3 ${themeClasses.secondaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75`}>
+              Refine Output Coherence
+            </button>
+            <button className={`w-full px-6 py-3 ${themeClasses.secondaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75`}>
+              Enhance Feature Extraction
+            </button>
+            <button className={`w-full px-6 py-3 ${themeClasses.secondaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75`}>
+              Optimize Decision Logic
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Model's Perceptions (Simulated Output)</h3>
+          {modelOutput.length > 0 ? (
+            <div className={`max-h-64 overflow-y-auto pr-2 ${themeClasses.outputBorder} border-l-2 pl-2`}>
+              {modelOutput.map((item, index) => (
+                <div key={index} className={`${themeClasses.outputBg} p-3 rounded-md mb-2 text-sm ${themeClasses.inputText}`}>
+                  <p><span className={`font-semibold ${themeClasses.outputAccentText}`}>Input:</span> {item.input}</p>
+                  <p><span className={`font-semibold ${themeClasses.outputSuccessText}`}>Prediction:</span> {item.prediction} (Confidence: {item.confidence})</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={`${themeClasses.subtleText}`}>Model output will appear here after training.</p>
+          )}
+        </div>
+
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>AGI Chain of Thought <span className="text-purple-400">// Real-time Learning</span></h3>
+          <p className={`${themeClasses.subtleText} mb-2`}>Internal processing during training:</p>
+          <div ref={chainOfThoughtRef} className={`max-h-64 overflow-y-auto pr-2 ${themeClasses.outputBorder} border-l-2 pl-2`}>
+            {chainOfThought.length > 0 ? (
+              chainOfThought.map((thought, index) => (
+                <div key={index} className={`${themeClasses.outputBg} p-2 rounded-md mb-1 text-sm ${themeClasses.inputText} animate-fade-in`}>
+                  <span className="text-purple-400">→</span> {thought}
+                </div>
+              ))
+            ) : (
+              <p className={`${themeClasses.subtleText}`}>Model's internal thought process will be displayed here during training.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Model Evaluator Component
+const ModelEvaluator = ({ evaluationResults, modelFeedback, onGenerateFeedback, themeClasses, modelEvaluated }) => {
+  if (!modelEvaluated) {
+    return (
+      <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border text-center opacity-70`}>
+        <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Model Self-Evaluation & Feedback <span className="text-purple-400">// Improve & Adapt</span></h2>
+        <p className={`${themeClasses.subtleText}`}>Evaluate the model in "Model Operations" to see performance metrics and AI feedback.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${themeClasses.cardBg} p-8 rounded-xl ${themeClasses.cardShadow} ${themeClasses.cardBorder} border`}>
+      <h2 className={`text-3xl font-bold ${themeClasses.strongText} mb-6`}>Model Self-Evaluation & Feedback <span className="text-purple-400">// Improve & Adapt</span></h2>
+      <p className={`${themeClasses.subtleText} mb-6`}>
+        Review the model's performance and receive AI-generated insights for continuous improvement.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>Performance Metrics</h3>
+          {evaluationResults ? (
+            <div className="space-y-3 text-lg">
+              <p className={`flex justify-between items-center ${themeClasses.inputText}`}>
+                <span className="font-medium">Accuracy:</span>
+                <span className="text-green-400 font-bold text-2xl">{evaluationResults.accuracy}</span>
+              </p>
+              <p className={`flex justify-between items-center ${themeClasses.inputText}`}>
+                <span className="font-medium">Precision:</span>
+                <span className="text-blue-400 font-bold text-2xl">{evaluationResults.precision}</span>
+              </p>
+              <p className={`flex justify-between items-center ${themeClasses.inputText}`}>
+                <span className="font-medium">Recall:</span>
+                <span className="text-yellow-400 font-bold text-2xl">{evaluationResults.recall}</span>
+              </p>
+            </div>
+          ) : (
+            <p className={`${themeClasses.subtleText}`}>No evaluation results yet. Please train and evaluate the model first.</p>
+          )}
+        </div>
+
+        <div className={`${themeClasses.innerCardBg} p-6 rounded-lg shadow-inner ${themeClasses.innerCardBorder} border`}>
+          <h3 className={`text-2xl font-semibold ${themeClasses.accentText} mb-4`}>AI-Generated Feedback</h3>
+          <button
+            className={`w-full px-8 py-3 ${themeClasses.primaryButtonBg} text-white font-semibold rounded-lg shadow-md transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 ${(!evaluationResults || modelFeedback.includes('Generating')) ? themeClasses.disabledOpacity : ''}`}
+            onClick={onGenerateFeedback}
+            disabled={!evaluationResults || modelFeedback.includes('Generating')}
+          >
+            {modelFeedback.includes('Generating') ? 'Generating...' : 'Generate AI Feedback'}
+          </button>
+          <div className={`mt-4 p-4 ${themeClasses.outputBg} rounded-md ${themeClasses.inputText} text-sm min-h-[100px] flex items-center justify-center`}>
+            {modelFeedback ? (
+              <p>{modelFeedback}</p>
+            ) : (
+              <p className={`${themeClasses.subtleText}`}>Click "Generate AI Feedback" to get insights on model performance.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;

@@ -1,0 +1,16 @@
+# ----- Python / VSCode -----
+__pycache__/
+*.pyc
+.vscode/
+
+# ----- Data & caches -----
+data_root/
+*.lmdb
+*.sqlite
+*.pt
+*.pkl
+*.jsonl
+
+# ----- OS clutter -----
+.DS_Store
+Thumbs.db
