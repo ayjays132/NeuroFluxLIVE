@@ -6,6 +6,8 @@ SelfResearch provides a modular environment for experimenting with HuggingFace t
 1. Create a Python 3.10+ environment.
 2. Install dependencies:
    ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    ```
 CUDA is automatically detected. If a GPU is available, PyTorch will use it.
@@ -120,6 +122,20 @@ out of the box.
 
 New training loops, datasets or evaluation scripts can be added under these
 modules, keeping the code organized as described in `AGENTS.md`.
+
+## Data Directory Layout
+Some utilities expect a folder named `data_root/` containing separate
+subdirectories for each modality:
+
+```
+data_root/
+├── text/    # UTF-8 .txt files
+├── image/   # .jpg, .png, .webp images
+├── audio/   # .wav or .flac audio
+└── sensor/  # JSON sensor readings
+```
+You can populate these directories with your own sample data to experiment
+with the `MultimodalDatasetManager`.
 
 ## Dataset Analysis
 The `analysis` module provides utilities for computing statistics on tokenized
@@ -238,9 +254,10 @@ print(best)
 
 
 ## Running Tests
-Run the unit tests with `pytest`:
+Run the unit tests with `pytest` from the repository root:
 
 ```bash
+source .venv/bin/activate  # if not already active
 pytest
 ```
 
