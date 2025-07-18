@@ -1,0 +1,14 @@
+{
+  "name": "NeuroFlux App",
+  "short_name": "NeuroFlux",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#7e22ce",
+  "icons": [
+    {
+      "src": "neuroflux-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -267,3 +267,7 @@ without a GPU.
 
 ## License
 This repository is provided for research and experimentation purposes only.
+
+## Frontend Assets and Ambient Audio
+The `webapp/` directory contains optional web assets used in browser-based demos. `manifest.webmanifest` references a custom SVG icon, and `animated-favicon.svg` provides a simple animated favicon. The example hook in `useAmbientAudio.ts` plays looping background audio while gracefully handling decoding errors that can occur with unsupported files.
+
