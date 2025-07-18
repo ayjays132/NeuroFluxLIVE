@@ -807,18 +807,18 @@ class RealTimeDataAbsorber:
         except Exception as e:
             logging.error(f"Error updating model: {e}")
     
-    def _calculate_self_supervised_loss(self, outputs: torch.Tensor, 
+    def _calculate_self_supervised_loss(self, outputs: torch.Tensor,
                                        inputs: Dict[str, torch.Tensor]) -> torch.Tensor:
         """Calculate self-supervised learning loss"""
         # Reconstruction loss
         reconstruction_loss = 0.0
-        
+
         for modality, input_tensor in inputs.items():
             # Try to reconstruct input from output
             reconstructed = self.model.encoders[modality](input_tensor)
 
-            # ---------------- CONTINUED ----------------
-            mse_loss = nn.MSELoss()(reconstructed, outputs[:len(encoded)])
+            # Compare reconstructed tensor with original input tensor
+            mse_loss = nn.MSELoss()(reconstructed, input_tensor)
             reconstruction_loss += mse_loss
 
         # Normalise by number of modalities
