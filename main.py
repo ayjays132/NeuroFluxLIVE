@@ -53,6 +53,44 @@ def feed_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
             logging.error("Failed to feed %s: %s", rec.rel_path, e)
 
 
+def initialize_system(
+    cfg: dict, metrics_q: Queue, interval: float
+) -> tuple[RealTimeDataAbsorber, DataRootWatcher, Path]:
+    """Instantiate core components from ``cfg`` and return absorber and watcher."""
+
+    paths = cfg.get("paths", {})
+    data_root = Path(paths.get("data_root", "./data"))
+    model_cfg = cfg.get("model", {})
+    training_cfg = cfg.get("training", {})
+    rag_cfg = cfg.get("rag", {})
+    pc_cfg = cfg.get("pc", {})
+
+    embed_dim = int(model_cfg.get("embed_dim", 256))
+    context_window = int(pc_cfg.get("context_window", 32))
+
+    rag_settings = {**rag_cfg, "embed_dim": embed_dim}
+    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings=rag_settings)
+
+    pc = PredictiveCodingTemporalModel(
+        embed_dim=embed_dim, context_window=context_window
+    )
+
+    absorber_settings = {
+        **training_cfg,
+        "db_path": paths.get("db_path", "realtime_learning.db"),
+    }
+    absorber = RealTimeDataAbsorber(
+        model_config=model_cfg, settings=absorber_settings, metrics_queue=metrics_q
+    )
+
+    absorber.attach_rag(rag)
+    absorber.attach_pc(pc)
+
+    watcher = DataRootWatcher(absorber=absorber, data_root=data_root, interval=interval)
+
+    return absorber, watcher, data_root
+
+
 def main(argv: Optional[list[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Run NeuroFluxLIVE bootstrap")
     parser.add_argument("--config", default="config.yaml", help="Path to config")
@@ -68,14 +106,6 @@ def main(argv: Optional[list[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     cfg = load_config(args.config)
-    paths = cfg.get("paths", {})
-    data_root = Path(paths.get("data_root", "./data"))
-    model_cfg = cfg.get("model", {})
-    training_cfg = cfg.get("training", {})
-    rag_cfg = cfg.get("rag", {})
-    pc_cfg = cfg.get("pc", {})
-    embed_dim = int(model_cfg.get("embed_dim", 256))
-    context_window = int(pc_cfg.get("context_window", 32))
 
     logging.basicConfig(
         level=logging.INFO,
@@ -84,27 +114,14 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
 
     metrics_q: Queue = Queue()
-    ws_thread = threading.Thread(
-        target=run_ws_server, args=(metrics_q,), daemon=True
-    )
+    ws_thread = threading.Thread(target=run_ws_server, args=(metrics_q,), daemon=True)
     ws_thread.start()
 
-    rag_settings = {**rag_cfg, "embed_dim": embed_dim}
-    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings=rag_settings)
-    pc = PredictiveCodingTemporalModel(embed_dim=embed_dim, context_window=context_window)
-    absorber_settings = {**training_cfg, "db_path": paths.get("db_path", "realtime_learning.db")}
-    absorber = RealTimeDataAbsorber(
-        model_config=model_cfg,
-        settings=absorber_settings,
-        metrics_queue=metrics_q,
+    absorber, watcher, data_root = initialize_system(
+        cfg, metrics_q, args.watch_interval
     )
-    absorber.attach_rag(rag)
-    absorber.attach_pc(pc)
 
     absorber.start_absorption()
-    watcher = DataRootWatcher(
-        absorber=absorber, data_root=data_root, interval=args.watch_interval
-    )
     watcher.start()
 
     try:
