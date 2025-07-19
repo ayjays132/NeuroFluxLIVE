@@ -57,6 +57,35 @@ The realtime metrics server starts automatically when running
 `ws://<host>:8765` (replace `<host>` if running remotely) to receive
 JSON updates describing current processing statistics.
 
+## Real-Time Stack
+The stack uses `RealTimeDataAbsorber` together with correlation-based
+retrieval and predictive coding. Configuration values such as the data
+root and database path live in `config.yaml`. Start the system with:
+
+```bash
+python main.py --config=config.yaml
+```
+
+This command launches background workers and the metrics WebSocket
+server on port `8765`.
+
+## Interface Directory
+The `interface/` folder hosts a minimal GUI (`Gui.html`) and the
+WebSocket server helper (`ws_server.py`). Open `Gui.html` in a browser
+while the real-time stack is running to watch live metrics. You can also
+subscribe manually using the following snippet:
+
+```python
+import asyncio
+import websockets
+
+async def watch():
+    async with websockets.connect("ws://localhost:8765") as ws:
+        print(await ws.recv())
+
+asyncio.run(watch())
+```
+
 ## Configuration
 Default settings such as the data directory, model embedding dimension and
 memory budget live in `config.yaml`. `main.py` loads this file automatically.
@@ -103,6 +132,13 @@ The project follows a simple structure so new functionality can be added easily:
 * `models/` – wrappers around HuggingFace models
 * `train/` – simple training loops
 * `eval/` – evaluation utilities such as perplexity measurement
+
+### Optional Modules
+Optional components are available under several directories:
+`peer_collab/` provides the collaboration server, `assessment/` contains
+grading helpers, `digital_literacy/` handles source evaluation,
+`simulation_lab/` offers physics and biology simulations, and `security/`
+implements authentication and ethics checks.
 
 The `train` module contains utilities for fine-tuning language models with
 CUDA support. Training now accepts separate train and evaluation splits and
