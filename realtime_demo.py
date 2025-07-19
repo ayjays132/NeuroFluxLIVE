@@ -1,4 +1,4 @@
-"""Entry point for launching the NeuroFluxLIVE runtime."""
+"""Bootstrap script for the NeuroFluxLIVE realtime demo."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import argparse
 import json
 import logging
 import threading
-from pathlib import Path
 from queue import Queue
+from pathlib import Path
 from typing import Optional
 
 import yaml
@@ -23,16 +23,14 @@ from interface.ws_server import run_ws_server
 from file_watcher import DataRootWatcher
 
 
-# ---------------------------------------------------------------------------
-
 def load_config(path: str) -> dict:
-    """Return dictionary parsed from YAML ``path``."""
+    """Load a YAML configuration file."""
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
-def feed_existing_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
-    """Send all existing samples in ``root`` through ``absorber``."""
+def feed_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
+    """Feed existing samples from ``root`` into the absorber."""
     if not root.exists():
         logging.warning("Data root %s does not exist", root)
         return
@@ -51,60 +49,69 @@ def feed_existing_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
             else:
                 continue
             absorber.absorb_data(data, rec.modality, source="dataset")
-        except Exception as e:  # pragma: no cover - best effort logging
+        except Exception as e:
             logging.error("Failed to feed %s: %s", rec.rel_path, e)
 
 
-def init_components(cfg: dict, metrics_q: Queue, interval: float) -> tuple[RealTimeDataAbsorber, DataRootWatcher, Path]:
-    """Instantiate core modules and return absorber, watcher and data root."""
+def main(argv: Optional[list[str]] = None) -> None:
+    parser = argparse.ArgumentParser(description="Run NeuroFluxLIVE bootstrap")
+    parser.add_argument("--config", default="config.yaml", help="Path to config")
+    parser.add_argument(
+        "--no-feed", action="store_true", help="Skip feeding data_root on start"
+    )
+    parser.add_argument(
+        "--watch-interval",
+        type=float,
+        default=5.0,
+        help="Seconds between scans for new data files",
+    )
+    args = parser.parse_args(argv)
+
+    cfg = load_config(args.config)
     paths = cfg.get("paths", {})
     data_root = Path(paths.get("data_root", "./data"))
     model_cfg = cfg.get("model", {})
     training_cfg = cfg.get("training", {})
     rag_cfg = cfg.get("rag", {})
     pc_cfg = cfg.get("pc", {})
-
     embed_dim = int(model_cfg.get("embed_dim", 256))
     context_window = int(pc_cfg.get("context_window", 32))
 
-    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings={**rag_cfg, "embed_dim": embed_dim})
-    pc_model = PredictiveCodingTemporalModel(embed_dim=embed_dim, context_window=context_window)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s] %(asctime)s - %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    metrics_q: Queue = Queue()
+    ws_thread = threading.Thread(
+        target=run_ws_server, args=(metrics_q,), daemon=True
+    )
+    ws_thread.start()
+
+    rag_settings = {**rag_cfg, "embed_dim": embed_dim}
+    rag = CorrelationRAGMemory(emb_dim=embed_dim, settings=rag_settings)
+    pc = PredictiveCodingTemporalModel(embed_dim=embed_dim, context_window=context_window)
+    absorber_settings = {**training_cfg, "db_path": paths.get("db_path", "realtime_learning.db")}
     absorber = RealTimeDataAbsorber(
         model_config=model_cfg,
-        settings={**training_cfg, "db_path": paths.get("db_path", "realtime_learning.db")},
+        settings=absorber_settings,
         metrics_queue=metrics_q,
     )
     absorber.attach_rag(rag)
-    absorber.attach_pc(pc_model)
-
-    watcher = DataRootWatcher(absorber=absorber, data_root=data_root, interval=interval)
-    return absorber, watcher, data_root
-
-
-# ---------------------------------------------------------------------------
-
-def main(argv: Optional[list[str]] = None) -> None:
-    parser = argparse.ArgumentParser(description="Launch the NeuroFluxLIVE runtime")
-    parser.add_argument("--config", default="config.yaml", help="Path to YAML config")
-    parser.add_argument("--watch-interval", type=float, default=5.0, help="Seconds between dataset scans")
-    parser.add_argument("--no-feed", action="store_true", help="Skip initial dataset ingestion")
-    args = parser.parse_args(argv)
-
-    cfg = load_config(args.config)
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(asctime)s - %(message)s", datefmt="%H:%M:%S")
-
-    metrics_q: Queue = Queue()
-    threading.Thread(target=run_ws_server, args=(metrics_q,), daemon=True).start()
-
-    absorber, watcher, data_root = init_components(cfg, metrics_q, args.watch_interval)
+    absorber.attach_pc(pc)
 
     absorber.start_absorption()
+    watcher = DataRootWatcher(
+        absorber=absorber, data_root=data_root, interval=args.watch_interval
+    )
     watcher.start()
 
     try:
         if not args.no_feed:
-            feed_existing_dataset(absorber, data_root)
+            feed_dataset(absorber, data_root)
         while True:
+            # Keep main thread alive while workers run
             threading.Event().wait(1.0)
     except KeyboardInterrupt:
         logging.info("Shutting down...")
