@@ -615,8 +615,8 @@ class RealTimeDataAbsorber:
 
         # Queue for streaming metrics
         self.metrics_queue = metrics_queue
-        self.rag_memory: Optional[CorrelationRAGMemory] = None
-        self.pc_model: Optional[PredictiveCodingTemporalModel] = None
+        self.corr_mem: Optional[CorrelationRAGMemory] = None
+        self.pc_head: Optional[PredictiveCodingTemporalModel] = None
         
         # Performance tracking
         self.performance_metrics = {
@@ -670,16 +670,23 @@ class RealTimeDataAbsorber:
     # ------------------------------------------------------------------
     def attach_rag(self, rag: CorrelationRAGMemory) -> None:
         """Attach a CorrelationRAGMemory instance."""
-        self.rag_memory = rag
+        self.corr_mem = rag
         logging.info("CorrelationRAGMemory attached")
 
     def attach_pc(self, pc: PredictiveCodingTemporalModel) -> None:
         """Attach a PredictiveCodingTemporalModel instance."""
-        self.pc_model = pc
+        self.pc_head = pc
         logging.info("PredictiveCodingTemporalModel attached")
     
     def start_absorption(self):
         """Start real-time data absorption"""
+        if self.corr_mem is None:
+            logging.error("CorrelationRAGMemory not attached")
+            raise RuntimeError("attach_rag() must be called before starting")
+        if self.pc_head is None:
+            logging.error("PredictiveCodingTemporalModel not attached")
+            raise RuntimeError("attach_pc() must be called before starting")
+
         self.is_running = True
         self.processing_thread = threading.Thread(target=self._processing_loop)
         self.learning_thread = threading.Thread(target=self._learning_loop)
@@ -728,13 +735,13 @@ class RealTimeDataAbsorber:
             )
 
             # Optional attachments
-            if self.pc_model is not None:
+            if self.pc_head is not None:
                 emb_tensor = torch.tensor(data_point.embeddings).float().to(
-                    self.pc_model.device
+                    self.pc_head.device
                 )
-                self.pc_model.observe_step(emb_tensor)
-            if self.rag_memory is not None:
-                self.rag_memory.add(data_point.embeddings, 0, {
+                self.pc_head.observe_step(emb_tensor)
+            if self.corr_mem is not None:
+                self.corr_mem.add(data_point.embeddings, 0, {
                     "source": source,
                     "timestamp": data_point.timestamp.isoformat(),
                 })
