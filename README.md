@@ -47,6 +47,12 @@ For the most comprehensive demonstration, which additionally clusters embeddings
 python3 ultimate_workflow.py
 ```
 
+For a minimal example that removes reliance on static datasets and
+continuously learns from new data, run `self_learning_bot.py`:
+```bash
+python3 self_learning_bot.py
+```
+
 To start the collaboration server used for peer collaboration, run the following in a separate process:
 ```bash
 python3 peer_collab/collaboration_server.py
