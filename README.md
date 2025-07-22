@@ -267,6 +267,20 @@ best = meta.optimize_prompt("Write a summary")
 print(best)
 ```
 
+### Unified Prompt Optimization
+
+`UnifiedPromptOptimizer` sequentially applies all available optimizers
+(advanced, bandit, annealing, reinforcement learning and evolutionary search)
+and then selects the best-scoring prompt.
+
+```python
+from analysis.unified_prompt_optimizer import UnifiedPromptOptimizer
+
+unified = UnifiedPromptOptimizer("distilgpt2")
+best = unified.optimize_prompt("Write a summary")
+print(best)
+```
+
 
 ## Running Tests
 Run the unit tests with `pytest` from the repository root after installing the
