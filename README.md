@@ -281,6 +281,20 @@ best = unified.optimize_prompt("Write a summary")
 print(best)
 ```
 
+### Omni Prompt Optimization
+
+`OmniPromptOptimizer` fuses **all** prompt optimizers, including Bayesian search
+and soft prompt tuning, to aggressively explore the search space before
+returning the top prompt.
+
+```python
+from analysis.omni_prompt_optimizer import OmniPromptOptimizer
+
+omni = OmniPromptOptimizer("distilgpt2")
+best = omni.optimize_prompt("Write a summary")
+print(best)
+```
+
 
 ## Running Tests
 Run the unit tests with `pytest` from the repository root after installing the
