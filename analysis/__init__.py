@@ -12,3 +12,5 @@ from .meta_prompt_optimizer import MetaPromptOptimizer
 from .prompt_embedding_tuner import PromptEmbeddingTuner
 from .unified_prompt_optimizer import UnifiedPromptOptimizer
 from .omni_prompt_optimizer import OmniPromptOptimizer
+
+from .synergized_prompt_optimizer import SynergizedPromptOptimizer
