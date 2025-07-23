@@ -1,58 +1,67 @@
 # NeuroFluxLIVE
 
-**NeuroFluxLIVE** is a prototype framework for building self‑learning applications. It fuses prompt optimisation, real‑time data ingestion and evaluation utilities into a single pipeline so a model can grow without relying on static datasets.
+**NeuroFluxLIVE** provides a unified pipeline for building self-learning agents without relying on static datasets. Real-time data ingestion is fused with several prompt optimisation strategies so models can adapt as new information arrives.
 
-## Synergised Architecture
-- **Unified prompt optimisation** – the `analysis` package contains multiple optimisers that are wrapped by `UnifiedPromptOptimizer` for evolutionary, bandit and RL strategies in one class.
-- **Real‑time absorption** – `RealTimeDataAbsorber` streams text, image and audio inputs and updates models on the fly.
-- **Datasetless workflows** – scripts such as `synergy_workflow.py` and `self_learning_bot.py` show how the system learns purely from live data.
-- **Research utilities** – additional modules handle simulation, source evaluation, security checks and collaborative note sharing.
+## Key Features
+- **Datasetless learning** – `RealTimeDataAbsorber` streams text, audio and images directly into optimisation routines.
+- **Unified prompt optimisation** – `UnifiedPromptOptimizer` combines evolutionary, bandit, annealing and RL strategies under one interface.
+- **Research utilities** – tools for simulation, source evaluation, ethics management and collaboration are included.
+- **Modular design** – packages under `analysis`, `train`, `models`, `digital_literacy` and more can be used independently or together.
 
 ## Installation
-1. Create a Python 3.10+ environment.
-2. Install the package and dependencies:
+1. Ensure Python 3.10+ is available.
+2. Install the package from source:
    ```bash
-   python3 -m venv .venv
+   python -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
-   pip install -e .            # install the `SelfResearch` package
+   pip install -e .
    ```
-   Optional extras for development can be installed with `pip install -r requirements-dev.txt`.
+   Development extras and tests can be installed with:
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
 
-## Quick Start
-Run the datasetless learning demo:
+## Usage
+Run the core datasetless demo:
 ```bash
-python3 synergy_workflow.py
+python synergy_workflow.py
 ```
-Start the self‑learning bot with continuous optimisation:
+Launch the self-learning bot with live metric streaming:
 ```bash
-python3 self_learning_bot.py
+python self_learning_bot.py
 ```
-To explore every module including clustering and collaboration features:
+The full showcase of every module is available via:
 ```bash
-python3 ultimate_workflow.py
+python ultimate_workflow.py
 ```
+Configuration defaults live in `config.yaml` and may be overridden with `--config`.
 
-## Metrics and Benchmarks
-Example perplexity using `distilgpt2` on a tiny AG News subset:
+## Metrics
+A quick benchmark with `distilgpt2` on a tiny AG News subset results in:
 ```
 Perplexity: 6785.07
 ```
-`RealTimeDataAbsorber` also streams real‑time metrics over WebSockets for monitoring during long running sessions.
+`RealTimeDataAbsorber` exposes live metrics over WebSockets during extended sessions.
 
-## Extending
-The project is organised into clearly separated packages:
+## Project Layout
 ```
 analysis/         prompt optimisers and dataset analytics
 train/            minimal training loops
 models/           transformer wrappers
-research_workflow/  topic selection helpers
-simulation_lab/   physics and biology simulations
 digital_literacy/ source credibility checks
+simulation_lab/   physics and biology simulations
 assessment/       rubric graders
-peer_collab/      simple collaboration server
+peer_collab/      collaboration server
 ```
-Create new modules in these folders or reuse the provided components. Settings are loaded from `config.yaml` and can be overridden with `--config` when running any workflow script.
+Create new modules under these directories and adjust settings in `config.yaml`.
+
+## Testing
+Run the unit tests before committing changes:
+```bash
+pytest
+```
+Any failures will be reported during collection or execution.
 
 ## License
 This repository is provided for research and experimentation purposes only.
