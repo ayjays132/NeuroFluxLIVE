@@ -14,3 +14,4 @@ from .unified_prompt_optimizer import UnifiedPromptOptimizer
 from .omni_prompt_optimizer import OmniPromptOptimizer
 
 from .synergized_prompt_optimizer import SynergizedPromptOptimizer
+from .hyper_prompt_optimizer import HyperPromptOptimizer
