@@ -22,6 +22,8 @@ def evaluate_perplexity(
     device_t = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
     model = AutoModelForCausalLM.from_pretrained(model_name).to(device_t)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     dataset = load_dataset(dataset_name, split=split)
 
