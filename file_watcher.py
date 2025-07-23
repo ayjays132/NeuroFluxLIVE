@@ -10,15 +10,18 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 from PIL import Image
+from typing import TYPE_CHECKING
 
 from multimodal_dataset_manager import DatasetIndex
-from RealTimeDataAbsorber import RealTimeDataAbsorber
+
+if TYPE_CHECKING:
+    from RealTimeDataAbsorber import RealTimeDataAbsorber
 
 
 class DataRootWatcher:
     """Watches ``data_root`` for new files and feeds them to ``absorber``."""
 
-    def __init__(self, absorber: RealTimeDataAbsorber, data_root: Path,
+    def __init__(self, absorber: "RealTimeDataAbsorber", data_root: Path,
                  interval: float = 5.0) -> None:
         self.absorber = absorber
         self.data_root = Path(data_root)

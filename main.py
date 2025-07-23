@@ -8,7 +8,7 @@ import logging
 import threading
 from queue import Queue
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import yaml
 import numpy as np
@@ -17,10 +17,12 @@ from PIL import Image
 
 from correlation_rag_module import CorrelationRAGMemory
 from predictive_coding_temporal_model import PredictiveCodingTemporalModel
-from RealTimeDataAbsorber import RealTimeDataAbsorber
 from multimodal_dataset_manager import DatasetIndex
 from interface.ws_server import run_ws_server
 from file_watcher import DataRootWatcher
+
+if TYPE_CHECKING:
+    from RealTimeDataAbsorber import RealTimeDataAbsorber
 
 
 def load_config(path: str) -> dict:
@@ -29,7 +31,7 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def feed_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
+def feed_dataset(absorber: "RealTimeDataAbsorber", root: Path) -> None:
     """Feed existing samples from ``root`` into the absorber."""
     if not root.exists():
         logging.warning("Data root %s does not exist", root)
@@ -55,7 +57,7 @@ def feed_dataset(absorber: RealTimeDataAbsorber, root: Path) -> None:
 
 def initialize_system(
     cfg: dict, metrics_q: Queue, interval: float
-) -> tuple[RealTimeDataAbsorber, DataRootWatcher, Path]:
+) -> tuple["RealTimeDataAbsorber", DataRootWatcher, Path]:
     """Instantiate core components from ``cfg`` and return absorber and watcher."""
 
     paths = cfg.get("paths", {})
@@ -74,6 +76,8 @@ def initialize_system(
     pc = PredictiveCodingTemporalModel(
         embed_dim=embed_dim, context_window=context_window
     )
+
+    from RealTimeDataAbsorber import RealTimeDataAbsorber
 
     absorber_settings = {
         **training_cfg,
