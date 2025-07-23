@@ -1,63 +1,58 @@
 # NeuroFluxLIVE
 
-NeuroFluxLIVE is a research playground for rapid experimentation with transformer models. All modules work together so the system can learn from new information in real time without depending on large static datasets. The project demonstrates how prompt optimisation, on‑the‑fly data ingestion and evaluation utilities combine into a single streamlined workflow.
+**NeuroFluxLIVE** is a prototype framework for building self‑learning applications. It fuses prompt optimisation, real‑time data ingestion and evaluation utilities into a single pipeline so a model can grow without relying on static datasets.
 
-## Features
-- **Real‑time learning** – `RealTimeDataAbsorber` continuously trains a model as new text, image or audio streams arrive.
-- **Universal prompt optimisers** – the `analysis` package provides evolutionary, bandit and reinforcement learning strategies to improve prompts automatically.
-- **Modular workflows** – example scripts (`main.py`, `premium_workflow.py`, `full_demo.py`, `ultimate_workflow.py`) show how to compose modules for different research goals.
-- **Datasetless operation** – `synergy_workflow.py` and `self_learning_bot.py` demonstrate how the system grows its knowledge solely from live data.
-- **Evaluation tools** – use `eval/language_model_evaluator.py` for perplexity checks and `analysis/dataset_analyzer.py` for dataset statistics and embedding clustering.
-- **Collaboration server** – `peer_collab/` enables shared notes and feedback during experiments.
+## Synergised Architecture
+- **Unified prompt optimisation** – the `analysis` package contains multiple optimisers that are wrapped by `UnifiedPromptOptimizer` for evolutionary, bandit and RL strategies in one class.
+- **Real‑time absorption** – `RealTimeDataAbsorber` streams text, image and audio inputs and updates models on the fly.
+- **Datasetless workflows** – scripts such as `synergy_workflow.py` and `self_learning_bot.py` show how the system learns purely from live data.
+- **Research utilities** – additional modules handle simulation, source evaluation, security checks and collaborative note sharing.
 
 ## Installation
-1. Create a Python&nbsp;3.10+ environment.
-2. Install the core and development dependencies:
+1. Create a Python 3.10+ environment.
+2. Install the package and dependencies:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
-   pip install -r requirements-dev.txt
+   pip install -e .            # install the `SelfResearch` package
    ```
-PyTorch automatically selects CUDA if available.
+   Optional extras for development can be installed with `pip install -r requirements-dev.txt`.
 
 ## Quick Start
-Run the synergy workflow to see datasetless learning in action:
+Run the datasetless learning demo:
 ```bash
 python3 synergy_workflow.py
 ```
-For a minimal continuously learning bot:
+Start the self‑learning bot with continuous optimisation:
 ```bash
 python3 self_learning_bot.py
 ```
-To explore the entire platform with clustering, perplexity evaluation and collaboration features:
+To explore every module including clustering and collaboration features:
 ```bash
 python3 ultimate_workflow.py
 ```
 
 ## Metrics and Benchmarks
-- **Perplexity** – `eval/language_model_evaluator.py` measures language model perplexity on any HuggingFace dataset.
-- **Dataset statistics** – `analysis/dataset_analyzer.py` reports lexical diversity, token entropy and clustering quality.
-- **Real‑time metrics** – `RealTimeDataAbsorber` streams performance indicators over WebSockets for monitoring.
+Example perplexity using `distilgpt2` on a tiny AG News subset:
+```
+Perplexity: 6785.07
+```
+`RealTimeDataAbsorber` also streams real‑time metrics over WebSockets for monitoring during long running sessions.
 
-The project ships with unit tests to ensure each optimizer and workflow behaves as expected. Run them after installing the requirements:
-```bash
-pytest
+## Extending
+The project is organised into clearly separated packages:
 ```
-
-## Extending the System
-The codebase is organised so new modules can plug into the existing pipeline:
+analysis/         prompt optimisers and dataset analytics
+train/            minimal training loops
+models/           transformer wrappers
+research_workflow/  topic selection helpers
+simulation_lab/   physics and biology simulations
+digital_literacy/ source credibility checks
+assessment/       rubric graders
+peer_collab/      simple collaboration server
 ```
-research_workflow/    topic selection utilities
-digital_literacy/     source evaluation and academic search
-simulation_lab/       physics and biology simulations
-assessment/           rubric-based grading
-peer_collab/          collaboration server
-analysis/             prompt optimisers and dataset analytics
-train/                simple training loops
-models/               wrappers around transformer models
-```
-Edit these components or create new ones to suit your research needs. `config.yaml` provides default settings that any workflow can override with `--config`.
+Create new modules in these folders or reuse the provided components. Settings are loaded from `config.yaml` and can be overridden with `--config` when running any workflow script.
 
 ## License
 This repository is provided for research and experimentation purposes only.
