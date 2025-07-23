@@ -6,7 +6,7 @@ SelfResearch – package wrapper & legacy-import shim.
 • Aliases old absolute imports like  `import analysis.foo`
   to the new fully-qualified path `SelfResearch.analysis.foo`.
 """
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 from pathlib import Path
 import importlib, pkgutil, sys as _sys
 
