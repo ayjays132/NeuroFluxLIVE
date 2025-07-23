@@ -174,6 +174,9 @@ class LanguageModelWrapper:
             log.error(f"{Colors.RED}Failed to generate text: {e}{Colors.RESET}")
             raise RuntimeError(f"Text generation failed: {e}")
 
+    # Allow the wrapper instance to be called directly like the HuggingFace pipeline
+    __call__ = generate
+
 
 class PromptAugmenter:
     """
@@ -341,22 +344,24 @@ class PromptAugmenter:
         
         generated_raw_texts: List[str] = []
         try:
-            # Generate multiple raw texts from different prompting angles for diversity
-            for p_gen in full_prompts_to_generate:
-                gen_output = self.generator.generate(
-                    p_gen,
-                    num_return_sequences=1, # Generate one sequence per prompt variation prompt
-                    max_new_tokens=40,    # Default token generation for variations
-                    do_sample=True,
-                    temperature=kwargs.get('temperature', 0.9), # Allow overriding temp for diversity
-                    top_k=kwargs.get('top_k', 50),
-                    top_p=kwargs.get('top_p', 0.95),
-                    **{k: v for k, v in kwargs.items() if k not in ['temperature', 'top_k', 'top_p']} # Pass through other kwargs
-                )
-                if isinstance(gen_output, str):
-                    generated_raw_texts.append(gen_output)
-                elif isinstance(gen_output, list) and gen_output:
-                    generated_raw_texts.append(gen_output[0]) # Take the first if list
+            gen_output = self.generator(
+                prompt,
+                num_return_sequences=n_variations,
+                max_new_tokens=40,
+                do_sample=True,
+                temperature=kwargs.get('temperature', 0.9),
+                top_k=kwargs.get('top_k', 50),
+                top_p=kwargs.get('top_p', 0.95),
+            )
+
+            if isinstance(gen_output, list):
+                for item in gen_output:
+                    if isinstance(item, dict) and "generated_text" in item:
+                        generated_raw_texts.append(item["generated_text"])
+                    else:
+                        generated_raw_texts.append(str(item))
+            else:
+                generated_raw_texts.append(str(gen_output))
 
         except Exception as e:
             log.error(f"{Colors.RED}Error during text generation for prompt '{prompt[:50]}...': {e}{Colors.RESET}")
@@ -364,21 +369,13 @@ class PromptAugmenter:
 
         augmented_variations: List[str] = []
         for raw_text in generated_raw_texts:
-            # Attempt to extract the new part of the prompt
-            # The exact extraction depends on the prompt structure used
-            extracted_text = raw_text
-            for p_gen_prefix in full_prompts_to_generate:
-                if raw_text.startswith(p_gen_prefix):
-                    extracted_text = raw_text[len(p_gen_prefix):].strip()
-                    break # Found the prefix, extract and break
-
-            # Basic cleanup: remove partial sentences, conversational filler
-            extracted_text = extracted_text.split('\n')[0].strip() # Take the first line
-            extracted_text = re.sub(r"^(Sure, here is|Okay, here's|Here's an expanded version:|Result:)\s*", "", extracted_text, flags=re.IGNORECASE).strip()
+            extracted_text = raw_text.strip()
             if extracted_text.endswith('.'):
-                extracted_text = extracted_text[:-1] # Remove trailing period for cleaner prompt
-
-            new_full_prompt = f"{prompt} {extracted_text}".strip()
+                extracted_text = extracted_text[:-1]
+            if extracted_text.startswith(prompt):
+                new_full_prompt = extracted_text
+            else:
+                new_full_prompt = f"{prompt} {extracted_text}".strip()
 
             # --- Ethical Assurance Step ---
             if self._is_safe_and_relevant(new_full_prompt, prompt):
@@ -413,6 +410,9 @@ class PromptAugmenter:
         Raises:
             RuntimeError: If dataset augmentation encounters an error.
         """
+        if "n_variations" in kwargs:
+            n_variations_per_prompt = kwargs.pop("n_variations")
+
         log.info(f"{Colors.BLUE}Augmenting a dataset of {len(prompts)} prompts.{Colors.RESET}")
         augmented_dataset: List[str] = []
         

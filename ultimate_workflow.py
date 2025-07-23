@@ -57,7 +57,11 @@ def main() -> None:
     coords = compute_tsne_embeddings(
         dataset[:10], "distilgpt2", device=device, perplexity=5.0
     )
-    print("t-SNE coordinates for first 2 samples:", coords[:2].tolist())
+    if hasattr(coords, "tolist"):
+        coords_list = coords.tolist()
+    else:
+        coords_list = list(coords)
+    print("t-SNE coordinates for first 2 samples:", coords_list[:2])
 
     # Quick training demo
     cfg = TrainingConfig(
@@ -78,7 +82,7 @@ def main() -> None:
     optim = PromptOptimizer("distilgpt2")
     adv_optim = AdvancedPromptOptimizer("distilgpt2")
     bandit = PromptBanditOptimizer("distilgpt2", reward_fn=len)
-    bayes = PromptBayesOptimizer("distilgpt2", n_calls=3)
+    bayes = PromptBayesOptimizer("distilgpt2", iterations=3)
     print("PromptOptimizer:", optim.optimize_prompt(base_prompt))
     print("AdvancedPromptOptimizer:", adv_optim.optimize_prompt(base_prompt))
     print("BanditOptimizer:", bandit.optimize_prompt(base_prompt))

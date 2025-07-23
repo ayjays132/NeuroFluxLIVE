@@ -39,12 +39,16 @@ class BayesianPromptOptimizer(PromptOptimizer):
             history.append((cand, score))
             return score
 
-        gp_minimize(
-            objective,
-            [Real(self.temp_range[0], self.temp_range[1])],
-            n_calls=self.iterations,
-            random_state=42,
-        )
+        if self.iterations < 10:
+            for t in [self.temp_range[0], self.temp_range[1]][: self.iterations]:
+                objective([t])
+        else:
+            gp_minimize(
+                objective,
+                [Real(self.temp_range[0], self.temp_range[1])],
+                n_calls=self.iterations,
+                random_state=42,
+            )
         best_prompt, _ = min(history, key=lambda x: x[1])
         return best_prompt
 

@@ -60,8 +60,8 @@ class OmniPromptOptimizer(PromptOptimizer):
             self.bayes,
         ):
             try:
-                base_prompt = opt.optimize_prompt(base_prompt, n_variations=n_variations)
-                candidates.append(base_prompt)
+                optimized = opt.optimize_prompt(base_prompt, n_variations=n_variations)
+                candidates.append(optimized)
             except Exception:
                 pass
 

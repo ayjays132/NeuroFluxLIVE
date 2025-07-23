@@ -100,10 +100,9 @@ class PromptOptimizer:
         outputs = self.generator(
             base_prompt,
             num_return_sequences=n_variations,
-            max_new_tokens=20, # Generate a short continuation for variation
+            max_new_tokens=20,  # Generate a short continuation for variation
             do_sample=True,
             temperature=temperature,
-            pad_token_id=self.tokenizer.eos_token_id, # Prevents warnings/errors with batch generation
         )
         variations = []
         for i, out in enumerate(outputs):
@@ -183,14 +182,21 @@ class PromptOptimizer:
         if base_prompt not in candidates:
             candidates.append(base_prompt)
 
-        try:
-            # Select the candidate with the minimum perplexity score
-            best_prompt = min(candidates, key=self.score_prompt)
-            log.info(f"{Colors.GREEN}Perplexity-optimized prompt: '{best_prompt[:100]}...'{Colors.RESET}")
-            return best_prompt
-        except Exception as e:
-            log.error(f"{Colors.RED}Error during perplexity-based prompt optimization: {e}. Returning base prompt.{Colors.RESET}")
+        scored: List[tuple[str, float]] = []
+        for cand in candidates:
+            try:
+                score = self.score_prompt(cand)
+                scored.append((cand, score))
+            except Exception:
+                continue
+
+        if not scored:
+            log.error(f"{Colors.RED}Error during perplexity-based prompt optimization: no valid scores.{Colors.RESET}")
             return base_prompt
+
+        best_prompt, _ = min(scored, key=lambda x: x[1])
+        log.info(f"{Colors.GREEN}Perplexity-optimized prompt: '{best_prompt[:100]}...'{Colors.RESET}")
+        return best_prompt
 
 if __name__ == "__main__":
     log.info(f"\n{Colors.BRIGHT_MAGENTA}{Colors.BOLD}╔═════════════════════════════════════════════════════════════════════════╗{Colors.RESET}")

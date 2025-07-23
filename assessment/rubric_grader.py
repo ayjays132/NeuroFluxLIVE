@@ -78,6 +78,8 @@ class RubricGrader:
 
         # Load a pre-trained model for sentence embeddings
         self.tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+        if getattr(self.tokenizer, 'pad_token_id', None) is None:
+            self.tokenizer.pad_token_id = getattr(self.tokenizer, 'eos_token_id', 0)
         self.model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').to(self.device)
 
         # Initialize a text generation pipeline for feedback
@@ -86,18 +88,21 @@ class RubricGrader:
         try:
             log.info(f"{Colors.CYAN}Loading sentence embedding model (all-MiniLM-L6-v2)...{Colors.RESET}")
             self.tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+            if getattr(self.tokenizer, 'pad_token_id', None) is None:
+                self.tokenizer.pad_token_id = getattr(self.tokenizer, 'eos_token_id', 0)
             self.model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').to(self.device)
             log.info(f"{Colors.GREEN}Sentence embedding model loaded on {self.device}.{Colors.RESET}")
             
             log.info(f"{Colors.CYAN}Loading feedback generation model (ayjays132/NeuroReasoner-1-NR-1)...{Colors.RESET}")
             pipeline_device_id = 0 if self.device.type == 'cuda' else -1 # 0 for first GPU, -1 for CPU
             self.feedback_generator_pipeline = pipeline(
-                "text-generation", 
-                model="ayjays132/NeuroReasoner-1-NR-1", 
-                tokenizer=self.tokenizer, # Ensure tokenizer is consistent
+                "text-generation",
+                model="ayjays132/NeuroReasoner-1-NR-1",
+                tokenizer=self.tokenizer,
                 device=pipeline_device_id
             )
-            log.info(f"{Colors.GREEN}Feedback generation pipeline loaded on device: {self.feedback_generator_pipeline.device}.{Colors.RESET}")
+            device_info = getattr(self.feedback_generator_pipeline, "device", "cpu")
+            log.info(f"{Colors.GREEN}Feedback generation pipeline loaded on device: {device_info}.{Colors.RESET}")
 
         except Exception as e:
             log.critical(f"{Colors.RED}Failed to load one or more NLP models: {e}{Colors.RESET}")
