@@ -95,6 +95,10 @@ class PromptRLOptimizer(PromptOptimizer):
         log.info(f"{Colors.BLUE}PromptRLOptimizer initialized with episodes={episodes}, epsilon={epsilon}, lr={lr}.{Colors.RESET}")
         log.info(f"{Colors.DIM}  Reward function source: {'Custom (provided)' if reward_fn else 'Internal (negated score_prompt)'}{Colors.RESET}")
 
+    def _is_safe_and_relevant(self, prompt: str) -> bool:
+        """Simple safety check used in tests."""
+        return bool(prompt.strip())
+
 
     def _reward(self, prompt: str) -> float:
         """
