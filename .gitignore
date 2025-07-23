@@ -14,3 +14,5 @@ data_root/
 # ----- OS clutter -----
 .DS_Store
 Thumbs.db
+# Packaging artifacts
+*.egg-info/

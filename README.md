@@ -1,6 +1,6 @@
 # NeuroFluxLIVE
 
-**NeuroFluxLIVE** provides a unified pipeline for building self-learning agents without relying on static datasets. Real-time data ingestion is fused with several prompt optimisation strategies so models can adapt as new information arrives.
+**NeuroFluxLIVE** provides a unified pipeline for building self-learning agents without relying on static datasets. Real-time data ingestion is fused with several prompt optimisation strategies so models can adapt as new information arrives. Version 1.0.0 marks our first production-ready release on PyPI.
 
 ## Key Features
 - **Datasetless learning** – `RealTimeDataAbsorber` streams text, audio and images directly into optimisation routines.
@@ -10,7 +10,11 @@
 
 ## Installation
 1. Ensure Python 3.10+ is available.
-2. Install the package from source:
+2. Install from PyPI:
+   ```bash
+   pip install SelfResearch
+   ```
+   Or install the package from source:
    ```bash
    python -m venv .venv
    source .venv/bin/activate
