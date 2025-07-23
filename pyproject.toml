@@ -4,8 +4,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SelfResearch"
-version = "0.0.1"
+version = "1.0.0"
+description = "Unified pipeline for self-learning agents with real-time data ingestion"
+readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+  {name = "SelfResearch Team"}
+]
+dependencies = [
+    "torch",
+    "transformers",
+    "datasets",
+    "flask",
+    "scikit-learn",
+    "requests",
+    "beautifulsoup4",
+    "matplotlib",
+    "scikit-optimize",
+    "trl",
+    "rich",
+    "faiss-cpu",
+    "opencv-python",
+    "soundfile",
+    "aiohttp",
+    "psutil",
+    "pillow",
+    "pyyaml",
+    "tqdm",
+    "torchvision",
+    "lmdb",
+    "msgpack",
+    "websockets"
+]
 
 # ------------------------------------------------------------------
 # Tell setuptools that the *current folder* (“.”) IS the package.
