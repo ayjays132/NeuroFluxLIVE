@@ -35,23 +35,45 @@ class VAECompressor(nn.Module):
     def __init__(self, latent_dim: int = 32, device: Optional[str] = None) -> None:
         super().__init__()
         self.latent_dim = latent_dim
-        self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        self.device = torch.device(
+            device or ("cuda" if torch.cuda.is_available() else "cpu")
+        )
         self.vaes: Dict[int, _VAE] = {}
+        self.optims: Dict[int, torch.optim.Optimizer] = {}
 
     def _get_vae(self, input_dim: int) -> _VAE:
         if input_dim not in self.vaes:
-            self.vaes[input_dim] = _VAE(input_dim, self.latent_dim).to(self.device)
+            vae = _VAE(input_dim, self.latent_dim).to(self.device)
+            self.vaes[input_dim] = vae
+            self.optims[input_dim] = torch.optim.Adam(vae.parameters(), lr=5e-2)
         return self.vaes[input_dim]
 
     def encode(self, tensor: torch.Tensor) -> torch.Tensor:
-        return tensor.view(-1).detach().cpu()
+        x = tensor.view(1, -1).to(self.device)
+        vae = self._get_vae(x.size(1))
+        with torch.no_grad():
+            mu, logvar = vae.encode(x)
+            z = vae.reparameterize(mu, logvar)
+        return z.squeeze(0).detach().cpu()
 
     def decode(self, latent: torch.Tensor, output_dim: int) -> torch.Tensor:
-        x = latent.view(-1)
-        if x.numel() >= output_dim:
-            return x[:output_dim].cpu()
-        pad = torch.zeros(output_dim - x.numel())
-        return torch.cat([x, pad]).cpu()
+        z = latent.view(1, -1).to(self.device)
+        vae = self._get_vae(output_dim)
+        with torch.no_grad():
+            recon = vae.decode(z)
+        return recon.view(-1)[:output_dim].cpu()
 
     def train_step(self, batch: torch.Tensor) -> float:
-        return 0.0
+        batch = batch.view(batch.size(0), -1).to(self.device)
+        vae = self._get_vae(batch.size(1))
+        optim = self.optims[batch.size(1)]
+        mu, logvar = vae.encode(batch)
+        z = vae.reparameterize(mu, logvar)
+        recon = vae.decode(z)
+        recon_loss = F.mse_loss(recon, batch)
+        kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        loss = recon_loss + 0.0001 * kld
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        return float(loss.item())
