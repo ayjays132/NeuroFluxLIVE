@@ -7,6 +7,7 @@ Retrieval-Augmented Correlation Memory for real-time robots / agents.
 from __future__ import annotations
 import faiss, numpy as np, torch, pickle, math, time, pathlib, os
 from typing import List, Tuple, Dict, Optional, Any
+from models.vae_compressor import VAECompressor
 
 # ----------------------------------------------------------------------
 def _l2norm(x: np.ndarray) -> np.ndarray:
@@ -29,6 +30,7 @@ class CorrelationRAGMemory:
                  hnsw_m: int = 32,
                  l2_norm: bool = True,
                  save_path: str = "corr_rag.mem",
+                 compressor: Optional[VAECompressor] = None,
                  settings: Optional[Dict[str, Any]] = None):
 
         if settings:
@@ -50,6 +52,8 @@ class CorrelationRAGMemory:
         self.device         = device
         self.l2_norm        = l2_norm
         self.save_path      = pathlib.Path(save_path)
+        self.compressor     = compressor
+        self.compressed: Dict[int, np.ndarray] = {}
 
         # -------- FAISS index (HNSW + PQ for compression) -------------- #
         quantizer = faiss.IndexHNSWFlat(emb_dim, hnsw_m)
@@ -88,7 +92,10 @@ class CorrelationRAGMemory:
 
         self.index.add_with_ids(emb, np.array([self.next_id], dtype="int64"))
         self.labels[self.next_id] = label
-        self.meta  [self.next_id] = meta or {}
+        self.meta[self.next_id] = meta or {}
+        if self.compressor is not None:
+            latent = self.compressor.encode(torch.from_numpy(emb.squeeze(0)))
+            self.compressed[self.next_id] = latent.numpy()
         self.next_id += 1
 
         # prune if budget exceeded
@@ -171,22 +178,29 @@ class CorrelationRAGMemory:
         for rid in remove_ids:
             self.index.remove_ids(np.array([rid], dtype="int64"))
             self.labels.pop(rid, None)
-            self.meta  .pop(rid, None)
+            self.meta.pop(rid, None)
+            self.compressed.pop(rid, None)
 
     # ------------------------------------------------------------------
     # persistence
     # ------------------------------------------------------------------
     def save(self):
-        self.save_path.with_suffix(".pkl").write_bytes(pickle.dumps({
+        state = {
             "labels": self.labels,
-            "meta"  : self.meta,
-            "W"     : self.W.cpu(),
-            "bias"  : self.bias.cpu(),
+            "meta": self.meta,
+            "W": self.W.cpu(),
+            "bias": self.bias.cpu(),
             "fisher": self.fisher_diag.cpu(),
-            "next"  : self.next_id,
-            "l2"    : self.l2_norm
-        }))
+            "next": self.next_id,
+            "l2": self.l2_norm,
+            "compressed": self.compressed if self.compressed else None,
+        }
+        self.save_path.with_suffix(".pkl").write_bytes(pickle.dumps(state))
         faiss.write_index(self.index, str(self.save_path))
+
+    def load(self) -> None:
+        """Public method to load state from disk if available."""
+        self._load()
 
     def _load(self):
         try:
@@ -198,9 +212,18 @@ class CorrelationRAGMemory:
             self.fisher_diag = state["fisher"].to(self.device)
             self.next_id = state["next"]
             self.l2_norm = state["l2"]
+            self.compressed = state.get("compressed", {}) or {}
             self.num_classes = self.W.shape[0]
-            self.index   = faiss.read_index(str(self.save_path))
-            self.index_is_trained = True
+            if pathlib.Path(str(self.save_path)).exists():
+                self.index = faiss.read_index(str(self.save_path))
+                self.index_is_trained = True
+            elif self.compressed and self.compressor is not None:
+                self.index = faiss.IndexIDMap2(faiss.IndexFlatL2(self.emb_dim))
+                for idx, latent in self.compressed.items():
+                    vec = self.compressor.decode(torch.tensor(latent), self.emb_dim).numpy().reshape(1, -1)
+                    if self.l2_norm:
+                        vec = _l2norm(vec)
+                    self.index.add_with_ids(vec, np.array([int(idx)], dtype="int64"))
             print(f"✅ Loaded CorrelationRAGMemory with {len(self.labels)} items.")
         except Exception as e:
             print("⚠️  Could not load memory:", e)

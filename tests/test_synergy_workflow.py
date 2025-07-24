@@ -28,4 +28,12 @@ def test_main_runs(monkeypatch):
     dummy_mod.RealTimeDataAbsorber = DummyAbsorber
     monkeypatch.setitem(sys.modules, "RealTimeDataAbsorber", dummy_mod)
 
+    fake_rag = types.ModuleType("correlation_rag_module")
+    fake_rag.CorrelationRAGMemory = lambda *a, **k: SimpleNamespace(save=lambda: None)
+    monkeypatch.setitem(sys.modules, "correlation_rag_module", fake_rag)
+
+    fake_comp = types.ModuleType("models.vae_compressor")
+    fake_comp.VAECompressor = lambda *a, **k: object()
+    monkeypatch.setitem(sys.modules, "models.vae_compressor", fake_comp)
+
     synergy_workflow.main()
