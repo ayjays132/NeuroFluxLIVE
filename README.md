@@ -4,6 +4,7 @@
 
 ## Key Features
 - **Datasetless learning** – `RealTimeDataAbsorber` streams text, audio and images directly into optimisation routines.
+- **Automated dataset retrieval** – `AutoDataCollector` searches the Hugging Face Hub and downloads datasets without manual steps.
 - **Unified prompt optimisation** – `UnifiedPromptOptimizer` combines evolutionary, bandit, annealing and RL strategies under one interface.
 - **Research utilities** – tools for simulation, source evaluation, ethics management and collaboration are included.
 - **Modular design** – packages under `analysis`, `train`, `models`, `digital_literacy` and more can be used independently or together.
