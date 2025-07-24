@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import aiohttp
+from analysis.dataset_quality import score_record
 
 # Importing `datasets` lazily so the module can be imported without the
 # dependency installed. Functions will raise an informative error if the
@@ -94,12 +95,19 @@ async def download_dataset(
             sensor_f = open(sensor_path, "w", encoding="utf-8")
         else:
             sensor_f = None
+
+        seen: set[str] = set()
         for idx, example in enumerate(ds):
+            quality, _ = score_record(
+                {c: example[c] for c in text_cols + sensor_cols}, seen
+            )
             if txt_f:
                 rec = {c: example[c] for c in text_cols}
+                rec["quality"] = quality
                 txt_f.write(json.dumps(rec) + "\n")
             if sensor_f:
                 rec = {c: example[c] for c in sensor_cols}
+                rec["quality"] = quality
                 sensor_f.write(json.dumps(rec) + "\n")
             for col in image_cols:
                 img = example[col]

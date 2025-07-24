@@ -55,6 +55,10 @@ def _load_absorber(monkeypatch):
     fake_sklearn_preproc = types.ModuleType("sklearn.preprocessing")
     fake_sklearn_preproc.StandardScaler = MagicMock()
     monkeypatch.setitem(sys.modules, "sklearn.preprocessing", fake_sklearn_preproc)
+
+    fake_dq = types.ModuleType("analysis.dataset_quality")
+    fake_dq.score_record = MagicMock(return_value=(1.0, []))
+    monkeypatch.setitem(sys.modules, "analysis.dataset_quality", fake_dq)
     return importlib.import_module("RealTimeDataAbsorber")
 
 
