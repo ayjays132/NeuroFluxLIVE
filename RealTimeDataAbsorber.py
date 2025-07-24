@@ -1057,6 +1057,12 @@ class RealTimeDataAbsorber:
                     (k, float(v), ts.isoformat()),
                 )
             conn.commit()
+        if self.corr_mem is not None:
+            self.performance_metrics["memory_items"] = len(self.corr_mem.labels)
+            try:
+                self.corr_mem.save()
+            except Exception as e:
+                logging.error(f"Memory save error: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────── #
 # Example usage (remove / comment-out when importing as a library)
