@@ -8,6 +8,10 @@
 - **Unified prompt optimisation** – `UnifiedPromptOptimizer` combines evolutionary, bandit, annealing and RL strategies under one interface.
 - **Research utilities** – tools for simulation, source evaluation, ethics management and collaboration are included.
 - **Modular design** – packages under `analysis`, `train`, `models`, `digital_literacy` and more can be used independently or together.
+- **Dataset quality scoring** – `analysis.dataset_quality` helps filter and score
+  new records before training.
+- **Embedding compression** – `VAECompressor` reduces memory usage when caching
+  embeddings.
 
 ## Installation
 1. Ensure Python 3.10+ is available.
@@ -59,6 +63,10 @@ When `CorrelationRAGMemory` is constructed with a `VAECompressor` and a
 `save_path`, compressed memories are persisted on disk. Calling
 `RealTimeDataAbsorber.log_performance_metrics()` will periodically save this
 state so that subsequent runs can reload it automatically.
+
+### Dataset Quality
+Guidelines for scoring data and checking entire datasets are available in
+[`docs/dataset_quality.md`](docs/dataset_quality.md).
 
 ## Metrics
 A quick benchmark with `distilgpt2` on a tiny AG News subset results in:
