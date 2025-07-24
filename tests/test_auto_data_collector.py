@@ -1,20 +1,18 @@
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from data.auto_data_collector import search_hf_datasets, download_dataset
 
 
 class DummyDataset:
-    def __init__(self, items):
+    def __init__(self, items, features):
         self.items = items
+        self.features = features
 
-    def to_json(self, path: str) -> None:
-        from json import dumps
-
-        with open(path, "w") as f:
-            for item in self.items:
-                f.write(dumps(item) + "\n")
+    def __iter__(self):
+        return iter(self.items)
 
 
 def test_search_hf_datasets():
@@ -25,9 +23,43 @@ def test_search_hf_datasets():
 
 
 def test_download_dataset(tmp_path: Path):
-    dummy_ds = DummyDataset([{'text': 'hello'}])
+    class DummyImage:
+        pass
+
+    class DummyAudio:
+        pass
+
+    class DummyValue:
+        def __init__(self, dtype):
+            self.dtype = dtype
+
+    DummyImage.__name__ = "Image"
+    DummyAudio.__name__ = "Audio"
+    DummyValue.__name__ = "Value"
+
+    features = {
+        "text": DummyValue("string"),
+        "image": DummyImage(),
+        "audio": DummyAudio(),
+        "sensor": DummyValue("float32"),
+    }
+    items = [
+        {
+            "text": "hello",
+            "image": {"path": "http://img"},
+            "audio": {"path": "http://aud"},
+            "sensor": 1.0,
+        }
+    ]
+    dummy_ds = DummyDataset(items, features)
     dummy_mod = SimpleNamespace(load_dataset=lambda name, split=None: dummy_ds)
-    with patch('data.auto_data_collector._datasets', return_value=dummy_mod):
-        path = download_dataset('dummy', 'train', tmp_path)
-    assert path.exists()
-    assert path.read_text().strip() == '{"text": "hello"}'
+
+    async_mock = AsyncMock()
+
+    with patch("data.auto_data_collector._datasets", return_value=dummy_mod), \
+         patch("data.auto_data_collector._download_file", async_mock):
+        out = asyncio.run(download_dataset("dummy", "train", tmp_path))
+
+    assert (out / "train_text.jsonl").exists()
+    assert (out / "train_sensor.jsonl").exists()
+    assert async_mock.await_count == 2
