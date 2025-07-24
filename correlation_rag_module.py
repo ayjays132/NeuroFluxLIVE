@@ -15,11 +15,17 @@ def _l2norm(x: np.ndarray) -> np.ndarray:
 
 # ----------------------------------------------------------------------
 class CorrelationRAGMemory:
-    """
-    • add(emb, label, meta)           → store embedding & metadata
-    • retrieve(query, k)              → top-k (emb, label, meta, score)
-    • classify(query)                 → returns logits + context
-    • update_head(batch_emb, batch_y) → online ridge-regression update
+    """Lightweight retrieval-augmented memory.
+
+    When a ``VAECompressor`` is provided, added embeddings are compressed and
+    saved alongside the FAISS index. ``save()`` writes both structures to disk
+    and ``load()`` restores them so that memories persist across sessions.
+
+    Public API:
+        • add(emb, label, meta)           → store embedding & metadata
+        • retrieve(query, k)              → top-k (emb, label, meta, score)
+        • classify(query)                 → returns logits + context
+        • update_head(batch_emb, batch_y) → online ridge‑regression update
     """
 
     def __init__(self,

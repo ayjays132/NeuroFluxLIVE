@@ -28,7 +28,8 @@
    ```
 
 ## Usage
-Run the core datasetless demo:
+Run the core datasetless demo (which demonstrates persistent memory across
+sessions):
 ```bash
 python synergy_workflow.py
 ```
@@ -53,6 +54,11 @@ compressor = VAECompressor(latent_dim=32)
 absorber = RealTimeDataAbsorber(model_config={}, compressor=compressor)
 ```
 Embeddings will be compressed before being cached and transparently decompressed when accessed.
+
+When `CorrelationRAGMemory` is constructed with a `VAECompressor` and a
+`save_path`, compressed memories are persisted on disk. Calling
+`RealTimeDataAbsorber.log_performance_metrics()` will periodically save this
+state so that subsequent runs can reload it automatically.
 
 ## Metrics
 A quick benchmark with `distilgpt2` on a tiny AG News subset results in:

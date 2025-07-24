@@ -18,9 +18,13 @@ def main() -> None:
     print(f"Using device: {device}")
 
     from RealTimeDataAbsorber import RealTimeDataAbsorber
+    from models.vae_compressor import VAECompressor
+    from correlation_rag_module import CorrelationRAGMemory
 
     compressor = VAECompressor(latent_dim=16)
     rag = CorrelationRAGMemory(emb_dim=384, save_path="synergy.mem", compressor=compressor)
+    if hasattr(rag, "labels"):
+        print(f"Loaded {len(rag.labels)} memory items")
 
     absorber = RealTimeDataAbsorber(model_config={}, settings={"db_path": ":memory:"})
     if hasattr(absorber, "attach_rag"):
@@ -37,7 +41,6 @@ def main() -> None:
 
     if hasattr(absorber, "log_performance_metrics"):
         absorber.log_performance_metrics()
-    rag.save()
 
 
 if __name__ == "__main__":
