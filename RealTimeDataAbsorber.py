@@ -38,6 +38,7 @@ import faiss
 import psutil
 import gc
 from contextlib import contextmanager
+from analysis.dataset_quality import score_record
 import random
 import warnings
 warnings.filterwarnings('ignore')
@@ -627,6 +628,7 @@ class RealTimeDataAbsorber:
         self.data_buffer = deque(maxlen=buffer_size)
         self.learning_events = PriorityQueue()
         self.processed_count = 0
+        self._seen_records: set[str] = set()
         
         # Real-time processing
         self.is_running = False
@@ -738,10 +740,16 @@ class RealTimeDataAbsorber:
             # Process the data
             processor = self.processors[modality]
             embeddings, extracted_metadata = processor.process(data)
-            
+
             # Combine metadata
             combined_metadata = metadata or {}
             combined_metadata.update(extracted_metadata)
+
+            # Evaluate quality
+            quality, issues = score_record({"data": data}, self._seen_records)
+            combined_metadata["quality_score"] = quality
+            if issues:
+                combined_metadata["quality_issues"] = issues
             
             emb_np = embeddings.numpy()
             data_point = DataPoint(

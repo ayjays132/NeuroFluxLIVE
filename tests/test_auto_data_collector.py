@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch, AsyncMock
+import json
 
 from data.auto_data_collector import search_hf_datasets, download_dataset
 
@@ -57,9 +58,13 @@ def test_download_dataset(tmp_path: Path):
     async_mock = AsyncMock()
 
     with patch("data.auto_data_collector._datasets", return_value=dummy_mod), \
-         patch("data.auto_data_collector._download_file", async_mock):
+         patch("data.auto_data_collector._download_file", async_mock), \
+         patch("data.auto_data_collector.score_record", return_value=(1.0, [])):
         out = asyncio.run(download_dataset("dummy", "train", tmp_path))
 
     assert (out / "train_text.jsonl").exists()
     assert (out / "train_sensor.jsonl").exists()
     assert async_mock.await_count == 2
+    with open(out / "train_text.jsonl") as f:
+        rec = json.loads(f.readline())
+    assert "quality" in rec

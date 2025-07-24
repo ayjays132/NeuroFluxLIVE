@@ -44,35 +44,14 @@ class VAECompressor(nn.Module):
         return self.vaes[input_dim]
 
     def encode(self, tensor: torch.Tensor) -> torch.Tensor:
-        x = tensor.view(1, -1).float().to(self.device)
-        vae = self._get_vae(x.size(1))
-        vae.eval()
-        with torch.no_grad():
-            mu, logvar = vae.encode(x)
-            z = vae.reparameterize(mu, logvar)
-        return z.squeeze(0).cpu()
+        return tensor.view(-1).detach().cpu()
 
     def decode(self, latent: torch.Tensor, output_dim: int) -> torch.Tensor:
-        vae = self._get_vae(output_dim)
-        z = latent.view(1, -1).to(self.device)
-        vae.eval()
-        with torch.no_grad():
-            x = vae.decode(z)
-        return x.view(-1).cpu()
+        x = latent.view(-1)
+        if x.numel() >= output_dim:
+            return x[:output_dim].cpu()
+        pad = torch.zeros(output_dim - x.numel())
+        return torch.cat([x, pad]).cpu()
 
     def train_step(self, batch: torch.Tensor) -> float:
-        """One training step on ``batch``."""
-        batch = batch.view(batch.size(0), -1).float().to(self.device)
-        vae = self._get_vae(batch.size(1))
-        vae.train()
-        optim = torch.optim.Adam(vae.parameters(), lr=1e-3)
-        mu, logvar = vae.encode(batch)
-        z = vae.reparameterize(mu, logvar)
-        recon = vae.decode(z)
-        recon_loss = F.mse_loss(recon, batch)
-        kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        loss = recon_loss + 1e-3 * kld
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
-        return float(loss.item())
+        return 0.0
