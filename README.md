@@ -37,6 +37,10 @@ Launch the self-learning bot with live metric streaming:
 ```bash
 python self_learning_bot.py
 ```
+Enable the interactive dashboard with SVG metrics:
+```bash
+python self_learning_bot.py --visual
+```
 The full showcase of every module is available via:
 ```bash
 python ultimate_workflow.py
