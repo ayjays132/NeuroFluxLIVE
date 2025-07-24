@@ -41,6 +41,10 @@ The full showcase of every module is available via:
 ```bash
 python ultimate_workflow.py
 ```
+Try the premium Rich-based CLI for a small widget demo:
+```bash
+python interface/premium_cli.py --steps 5
+```
 Configuration defaults live in `config.yaml` and may be overridden with `--config`.
 
 ### Embedding Compression
