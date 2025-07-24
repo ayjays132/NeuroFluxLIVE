@@ -36,6 +36,7 @@ import soundfile as sf
 import lmdb                     # 🔒 fast caching; pip install lmdb
 import msgpack                  # 🔒 compact binary serialisation
 from tqdm.auto import tqdm
+from models.vae_compressor import VAECompressor
 
 # ------------------------------------------------------------------ #
 def sha1(path: str | bytes) -> str:
@@ -128,7 +129,8 @@ class LMDBCache:
     """Simple LMDB-backed cache for tensors."""
 
     def __init__(self, path: str, readonly: bool = False,
-                 map_size: int = 1 << 40) -> None:
+                 map_size: int = 1 << 40,
+                 compressor: Optional["VAECompressor"] = None) -> None:
         """Create a new cache or open an existing one.
 
         Args:
@@ -138,6 +140,7 @@ class LMDBCache:
         """
         self.path = pathlib.Path(path)
         self.readonly = readonly
+        self.compressor = compressor
         if not readonly:
             self.path.mkdir(parents=True, exist_ok=True)
         self.env = lmdb.open(
@@ -159,17 +162,26 @@ class LMDBCache:
             return None
         obj = msgpack.unpackb(bytes(buf), raw=False)
         dtype = getattr(torch, obj["dtype"].split(".")[-1])
-        return torch.tensor(obj["data"], dtype=dtype)
+        tensor = torch.tensor(obj["data"], dtype=dtype)
+        if self.compressor is not None and "orig_dim" in obj:
+            tensor = self.compressor.decode(tensor, obj["orig_dim"])
+        return tensor
 
     def put(self, key: str, tensor: torch.Tensor) -> None:
         """Store ``tensor`` under ``key``."""
         if self.readonly:
             raise RuntimeError("Cannot write to read-only LMDB cache")
         arr = tensor.detach().cpu()
+        orig_dim = None
+        if self.compressor is not None:
+            orig_dim = arr.numel()
+            arr = self.compressor.encode(arr)
         obj = {
             "dtype": str(arr.dtype),
             "data": arr.tolist(),
         }
+        if orig_dim is not None:
+            obj["orig_dim"] = orig_dim
         data = msgpack.packb(obj, use_bin_type=True)
         with self.env.begin(write=True) as txn:
             txn.put(key.encode("utf-8"), data)
