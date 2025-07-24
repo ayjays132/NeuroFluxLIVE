@@ -42,6 +42,8 @@ import random
 import warnings
 warnings.filterwarnings('ignore')
 
+from models.vae_compressor import VAECompressor
+
 from interface.ws_server import run_ws_server
 from correlation_rag_module import CorrelationRAGMemory
 from predictive_coding_temporal_model import PredictiveCodingTemporalModel
@@ -300,13 +302,15 @@ class SensorProcessor(ModalityProcessor):
 
 class PatternDetector:
     """Detect patterns and anomalies in real-time data"""
-    
-    def __init__(self, window_size: int = 100, anomaly_threshold: float = 2.0):
+
+    def __init__(self, window_size: int = 100, anomaly_threshold: float = 2.0,
+                 compressor: Optional["VAECompressor"] = None):
         self.window_size = window_size
         self.anomaly_threshold = anomaly_threshold
         self.data_windows = defaultdict(lambda: deque(maxlen=window_size))
         self.pattern_history = defaultdict(list)
         self.clusterer = DBSCAN(eps=0.5, min_samples=5)
+        self.compressor = compressor
         
     def detect_patterns(self, data_point: DataPoint) -> List[LearningEvent]:
         """Detect patterns in incoming data"""
@@ -347,7 +351,10 @@ class PatternDetector:
         embeddings = []
         for dp in window_data[-50:]:  # Last 50 points
             if dp.embeddings is not None:
-                embeddings.append(dp.embeddings.flatten())
+                emb = dp.embeddings
+                if self.compressor is not None and dp.metadata.get("compressed"):
+                    emb = self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"]).numpy()
+                embeddings.append(emb.flatten())
         
         if len(embeddings) < 10:
             return None
@@ -358,7 +365,10 @@ class PatternDetector:
         mean_embedding = np.mean(embeddings, axis=0)
         std_embedding = np.std(embeddings, axis=0)
         
-        current_embedding = data_point.embeddings.flatten()
+        current_embedding = data_point.embeddings
+        if self.compressor is not None and data_point.metadata.get("compressed"):
+            current_embedding = self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"]).numpy()
+        current_embedding = current_embedding.flatten()
         z_scores = np.abs((current_embedding - mean_embedding) / (std_embedding + 1e-8))
         max_z_score = np.max(z_scores)
         
@@ -384,12 +394,18 @@ class PatternDetector:
             return None
         
         # Look for similar embeddings in recent history
-        current_embedding = data_point.embeddings.flatten()
+        current_embedding = data_point.embeddings
+        if self.compressor is not None and data_point.metadata.get("compressed"):
+            current_embedding = self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"]).numpy()
+        current_embedding = current_embedding.flatten()
         similarities = []
         
         for dp in window_data[-20:]:
             if dp.embeddings is not None:
-                other_embedding = dp.embeddings.flatten()
+                other_embedding = dp.embeddings
+                if self.compressor is not None and dp.metadata.get("compressed"):
+                    other_embedding = self.compressor.decode(torch.tensor(other_embedding), dp.metadata["orig_dim"]).numpy()
+                other_embedding = other_embedding.flatten()
                 similarity = np.dot(current_embedding, other_embedding) / (
                     np.linalg.norm(current_embedding) * np.linalg.norm(other_embedding) + 1e-8
                 )
@@ -555,6 +571,8 @@ class RealTimeDataAbsorber:
         adaptation_threshold: Signal threshold for adaptive behaviour.
         metrics_queue: Optional queue used to stream performance metrics to
             external consumers (e.g., the WebSocket server).
+        compressor: Optional VAECompressor used to compress embeddings before
+            storage.
     """
 
     def __init__(self,
@@ -565,7 +583,8 @@ class RealTimeDataAbsorber:
                  batch_size: int = 32,
                  update_frequency: int = 100,
                  adaptation_threshold: float = 0.7,
-                 metrics_queue: Optional[Queue] = None):
+                 metrics_queue: Optional[Queue] = None,
+                 compressor: Optional["VAECompressor"] = None):
         
         if settings:
             learning_rate = settings.get("learning_rate", learning_rate)
@@ -601,7 +620,8 @@ class RealTimeDataAbsorber:
         self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
         
         # Initialize pattern detector
-        self.pattern_detector = PatternDetector()
+        self.pattern_detector = PatternDetector(compressor=compressor)
+        self.compressor = compressor
         
         # Data storage
         self.data_buffer = deque(maxlen=buffer_size)
@@ -723,28 +743,30 @@ class RealTimeDataAbsorber:
             combined_metadata = metadata or {}
             combined_metadata.update(extracted_metadata)
             
-            # Create data point
+            emb_np = embeddings.numpy()
             data_point = DataPoint(
                 data=data,
                 modality=modality,
                 timestamp=datetime.now(),
                 source=source,
                 priority=priority,
-                embeddings=embeddings.numpy(),
+                embeddings=emb_np,
                 metadata=combined_metadata
             )
 
-            # Optional attachments
             if self.pc_head is not None:
-                emb_tensor = torch.tensor(data_point.embeddings).float().to(
-                    self.pc_head.device
-                )
-                self.pc_head.observe_step(emb_tensor)
+                self.pc_head.observe_step(embeddings.squeeze(0).to(self.pc_head.device))
             if self.corr_mem is not None:
-                self.corr_mem.add(data_point.embeddings, 0, {
+                self.corr_mem.add(emb_np, 0, {
                     "source": source,
                     "timestamp": data_point.timestamp.isoformat(),
                 })
+
+            if self.compressor is not None:
+                latent = self.compressor.encode(torch.tensor(data_point.embeddings))
+                data_point.embeddings = latent.numpy()
+                data_point.metadata["orig_dim"] = embeddings.numel()
+                data_point.metadata["compressed"] = True
             
             # Add to buffer
             self.data_buffer.append(data_point)
@@ -914,7 +936,10 @@ class RealTimeDataAbsorber:
             batch_inputs = defaultdict(list)
             for dp in batch:
                 if dp.embeddings is not None:
-                    batch_inputs[dp.modality].append(dp.embeddings)
+                    emb = dp.embeddings
+                    if self.compressor is not None and dp.metadata.get("compressed"):
+                        emb = self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"]).numpy()
+                    batch_inputs[dp.modality].append(emb)
 
             tensor_inputs = {
                 m: torch.stack([torch.tensor(e).float() for e in embs])
@@ -946,7 +971,10 @@ class RealTimeDataAbsorber:
         for dp in event.data_points:
             if dp.embeddings is None:
                 continue
-            emb = torch.tensor(dp.embeddings).float().unsqueeze(0)
+            emb_arr = dp.embeddings
+            if self.compressor is not None and dp.metadata.get("compressed"):
+                emb_arr = self.compressor.decode(torch.tensor(emb_arr), dp.metadata["orig_dim"]).numpy()
+            emb = torch.tensor(emb_arr).float().unsqueeze(0)
             adapted = self.model.adapt(dp.modality, emb)
             # We do not back-prop here; just cache result / log
             logging.info(f"Adapted to anomaly in modality '{dp.modality}'.")

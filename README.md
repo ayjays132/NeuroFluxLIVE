@@ -42,6 +42,18 @@ python ultimate_workflow.py
 ```
 Configuration defaults live in `config.yaml` and may be overridden with `--config`.
 
+### Embedding Compression
+`VAECompressor` can be attached to `RealTimeDataAbsorber` to reduce the size of stored embeddings. Pass an instance when constructing the absorber:
+
+```python
+from models.vae_compressor import VAECompressor
+from RealTimeDataAbsorber import RealTimeDataAbsorber
+
+compressor = VAECompressor(latent_dim=32)
+absorber = RealTimeDataAbsorber(model_config={}, compressor=compressor)
+```
+Embeddings will be compressed before being cached and transparently decompressed when accessed.
+
 ## Metrics
 A quick benchmark with `distilgpt2` on a tiny AG News subset results in:
 ```
