@@ -25,6 +25,7 @@ dependencies = [
     "torch",
     "transformers",
     "datasets",
+    "numpy<2",
     "flask",
     "scikit-learn",
     "requests",

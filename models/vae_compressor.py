@@ -63,17 +63,21 @@ class VAECompressor(nn.Module):
             recon = vae.decode(z)
         return recon.view(-1)[:output_dim].cpu()
 
-    def train_step(self, batch: torch.Tensor) -> float:
+    def train_step(self, batch: torch.Tensor, inner_steps: int = 2) -> float:
+        """Perform one or more optimisation steps and return the last loss."""
         batch = batch.view(batch.size(0), -1).to(self.device)
         vae = self._get_vae(batch.size(1))
         optim = self.optims[batch.size(1)]
-        mu, logvar = vae.encode(batch)
-        z = vae.reparameterize(mu, logvar)
-        recon = vae.decode(z)
-        recon_loss = F.mse_loss(recon, batch)
-        kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        loss = recon_loss + 0.0001 * kld
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
-        return float(loss.item())
+        loss_val = 0.0
+        for _ in range(inner_steps):
+            mu, logvar = vae.encode(batch)
+            z = vae.reparameterize(mu, logvar)
+            recon = vae.decode(z)
+            recon_loss = F.mse_loss(recon, batch)
+            kld = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+            loss = recon_loss + 0.0001 * kld
+            optim.zero_grad()
+            loss.backward()
+            optim.step()
+            loss_val = float(loss.item())
+        return loss_val

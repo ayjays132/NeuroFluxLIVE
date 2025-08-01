@@ -1,4 +1,5 @@
 torch==2.2.0
+numpy<2
 transformers
 scikit-learn
 flask

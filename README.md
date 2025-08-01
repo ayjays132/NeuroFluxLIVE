@@ -16,16 +16,17 @@
    pip install SelfResearch
    ```
    Or install the package from source:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   pip install -e .
-   ```
-   Development extras and tests can be installed with:
-   ```bash
-   pip install -r requirements-dev.txt
-   ```
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+```
+The requirements files pin `numpy<2` to maintain compatibility with PyTorch.
+Development extras and tests can be installed with:
+```bash
+pip install -r requirements-dev.txt
+```
 
 ## Usage
 Run the core datasetless demo (which demonstrates persistent memory across
