@@ -57,7 +57,20 @@ def test_multimodal_dataset_getitem(tmp_path):
     tensor, rec = ds[0]
     assert isinstance(tensor, torch.Tensor)
     assert rec.modality == "text"
+    assert tensor.dtype == torch.uint8
     assert cache.get("t") is not None
+
+    tensor, rec = ds[1]
+    assert rec.modality == "image"
+    assert tensor.dtype == torch.uint8
+
+    tensor, rec = ds[2]
+    assert rec.modality == "audio"
+    assert tensor.dtype == torch.float32
+
+    tensor, rec = ds[3]
+    assert rec.modality == "sensor"
+    assert tensor.dtype == torch.float32
 
     loader = create_balanced_dataloader(ds, batch_size=2, shuffle=False)
     ids = []
