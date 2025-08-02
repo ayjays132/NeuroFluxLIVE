@@ -264,12 +264,12 @@ class MultimodalDataset(Dataset):
         elif rec.modality == "image":
             with Image.open(path) as img:
                 arr = np.array(img.convert("RGB"))
-            tensor = torch.tensor(arr).permute(2, 0, 1)
+            tensor = torch.tensor(arr, dtype=torch.uint8).permute(2, 0, 1)
         elif rec.modality == "audio":
             audio, _ = sf.read(path.as_posix())
             if audio.ndim > 1:
                 audio = np.mean(audio, axis=1)
-            tensor = torch.tensor(audio)
+            tensor = torch.tensor(audio, dtype=torch.float32)
         elif rec.modality == "sensor":
             obj = json.loads(path.read_text())
             values = list(obj.values()) if isinstance(obj, dict) else obj
