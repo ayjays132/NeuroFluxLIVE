@@ -42,11 +42,24 @@ Enable the interactive dashboard with SVG metrics:
 ```bash
 python self_learning_bot.py --visual
 ```
-The full showcase of every module is available via:
+For an end-to-end demonstration that ties everything together, see the
+[Ultimate Workflow](#ultimate-workflow) section below.
+Configuration defaults live in `config.yaml` and may be overridden with `--config`.
+
+## Ultimate Workflow
+`ultimate_workflow.py` orchestrates all major modules in a single run. It
+streams data through `RealTimeDataAbsorber`, analyzes the resulting dataset,
+trains and evaluates a language model, runs physics simulations, and interacts
+with the collaboration server so results can be shared across sessions.
+
 ```bash
 python ultimate_workflow.py
 ```
-Configuration defaults live in `config.yaml` and may be overridden with `--config`.
+
+Because the script downloads datasets and model weights, performs clustering
+and t-SNE, executes short training loops, and calls the collaboration server,
+it benefits from a CUDA‑enabled GPU and at least **8 GB** of system RAM. On a
+CPU-only machine the demo may take several minutes to complete.
 
 ### Embedding Compression
 `VAECompressor` can be attached to `RealTimeDataAbsorber` to reduce the size of stored embeddings. Pass an instance when constructing the absorber. The compressor trains a small variational autoencoder so embeddings are encoded to a latent vector and reconstructed only when accessed:
