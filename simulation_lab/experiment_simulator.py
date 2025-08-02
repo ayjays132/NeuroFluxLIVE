@@ -9,6 +9,7 @@ import os
 from typing import List, Dict, Any, Union
 
 from utils.colors import Colors
+from utils.tensor_ops import tensor_to_ndarray
 
 # --- Configure Logging for structured and colored output ---
 # Custom formatter to add colors
@@ -220,7 +221,7 @@ class ExperimentSimulator:
         """
         log.info(f"{Colors.BLUE}Generating visualization: '{title}'...{Colors.RESET}")
         try:
-            data_np = data.cpu().numpy() # Move to CPU for plotting
+            data_np = tensor_to_ndarray(data)  # Move to CPU for plotting
             
             plt.figure(figsize=(12, 7)) # Larger figure for better detail
             

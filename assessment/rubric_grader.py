@@ -9,6 +9,7 @@ import yaml  # Added for rubric loading example, ensure you have pyyaml installe
 import re  # For advanced text processing in feedback generation
 
 from utils.colors import Colors
+from utils.tensor_ops import tensor_to_ndarray
 
 # --- Configure Logging for structured and colored output ---
 class ColoredFormatter(logging.Formatter):
@@ -232,9 +233,11 @@ class RubricGrader:
 
         submission_embedding = self._get_sentence_embedding(submission_text)
 
-        # Ensure embeddings are on CPU for numpy. If they are already on CPU, this is a no-op.
-        # Cosine similarity from sklearn expects numpy arrays.
-        similarity = cosine_similarity(submission_embedding.cpu().numpy(), expected_embedding.cpu().numpy())[0][0]
+        # Ensure embeddings are on CPU as NumPy arrays
+        similarity = cosine_similarity(
+            tensor_to_ndarray(submission_embedding),
+            tensor_to_ndarray(expected_embedding),
+        )[0][0]
         
         # Clamp similarity between 0 and 1, as it can sometimes be slightly outside due to floating point precision
         similarity = max(0.0, min(1.0, similarity))

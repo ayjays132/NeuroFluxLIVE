@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModel
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple, Union
+from utils.tensor_ops import tensor_to_ndarray
 import asyncio
 import aiohttp
 import json
@@ -63,7 +64,7 @@ class RAGRetriever:
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, padding=True)
         with torch.no_grad():
             outputs = self.embedding_model(**inputs)
-            embedding = outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
+            embedding = tensor_to_ndarray(outputs.last_hidden_state.mean(dim=1).squeeze())
         
         self.embeddings_cache[text] = embedding
         return embedding

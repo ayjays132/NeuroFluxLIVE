@@ -8,6 +8,7 @@ from __future__ import annotations
 import faiss, numpy as np, torch, pickle, math, time, pathlib, os
 from typing import List, Tuple, Dict, Optional, Any
 from models.vae_compressor import VAECompressor
+from utils.tensor_ops import tensor_to_ndarray
 
 # ----------------------------------------------------------------------
 def _l2norm(x: np.ndarray) -> np.ndarray:
@@ -101,7 +102,7 @@ class CorrelationRAGMemory:
         self.meta[self.next_id] = meta or {}
         if self.compressor is not None:
             latent = self.compressor.encode(torch.from_numpy(emb.squeeze(0)))
-            self.compressed[self.next_id] = latent.numpy()
+            self.compressed[self.next_id] = tensor_to_ndarray(latent)
         self.next_id += 1
 
         # prune if budget exceeded
@@ -129,7 +130,7 @@ class CorrelationRAGMemory:
         if self.l2_norm:
             q = torch.nn.functional.normalize(q, dim=1)
         logits = torch.matmul(q, self.W.t()) + self.bias
-        return (logits / temperature).cpu().numpy()[0], ctx
+        return tensor_to_ndarray(logits / temperature)[0], ctx
 
     def update_head(self, batch_emb: np.ndarray, batch_labels: np.ndarray, lr: float = 0.5):
         """Online ridge-regression update + Fisher tracking."""
@@ -226,7 +227,9 @@ class CorrelationRAGMemory:
             elif self.compressed and self.compressor is not None:
                 self.index = faiss.IndexIDMap2(faiss.IndexFlatL2(self.emb_dim))
                 for idx, latent in self.compressed.items():
-                    vec = self.compressor.decode(torch.tensor(latent), self.emb_dim).numpy().reshape(1, -1)
+                    vec = tensor_to_ndarray(
+                        self.compressor.decode(torch.tensor(latent), self.emb_dim)
+                    ).reshape(1, -1)
                     if self.l2_norm:
                         vec = _l2norm(vec)
                     self.index.add_with_ids(vec, np.array([int(idx)], dtype="int64"))
