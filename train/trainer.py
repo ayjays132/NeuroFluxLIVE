@@ -65,6 +65,7 @@ class TrainingConfig:
 
     # data / text
     text_column: str = "text"
+    max_length: Optional[int] = None
 
     # training
     output_dir: str = "./model_output"
@@ -111,6 +112,7 @@ def train_model(
         train_split=cfg.train_split,
         eval_split=cfg.eval_split,
         text_column=cfg.text_column,
+        max_length=cfg.max_length,
     )
 
     # 🧠 Model & Tokenizer ---------------------------------------------
@@ -121,6 +123,8 @@ def train_model(
     model.to(device)
 
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     # ⚙️ TrainingArguments ---------------------------------------------
     training_args = TrainingArguments(
@@ -196,6 +200,7 @@ def main() -> None:
     parser.add_argument("--warmup-steps", type=int, default=0)
     parser.add_argument("--lr-scheduler", default="linear")
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
+    parser.add_argument("--max-length", type=int, help="Truncate sequences to this length")
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--bf16", action="store_true")
     parser.add_argument("--gradient-ckpt", action="store_true")
@@ -218,6 +223,7 @@ def main() -> None:
         warmup_steps=args.warmup_steps,
         lr_scheduler_type=args.lr_scheduler,
         max_grad_norm=args.max_grad_norm,
+        max_length=args.max_length,
         fp16=args.fp16,
         bf16=args.bf16,
         gradient_ckpt=args.gradient_ckpt,

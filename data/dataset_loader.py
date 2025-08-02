@@ -66,12 +66,19 @@ def load_and_tokenize(
         tokenizer.pad_token = eos
 
     def tokenize(batch: Any) -> Any:
-        return tokenizer(
+        enc = tokenizer(
             batch[text_column],
             padding="max_length",
             truncation=True,
             max_length=max_length,
         )
+        labels = [ids.copy() for ids in enc["input_ids"]]
+        for label, mask in zip(labels, enc["attention_mask"]):
+            for i, m in enumerate(mask):
+                if m == 0:
+                    label[i] = -100
+        enc["labels"] = labels
+        return enc
 
     tokenized = dataset.map(
         tokenize,
@@ -79,7 +86,7 @@ def load_and_tokenize(
         batch_size=batch_size,
         num_proc=num_proc,
     )
-    tokenized = tokenized.with_format("torch", columns=["input_ids", "attention_mask"])
+    tokenized = tokenized.with_format("torch", columns=["input_ids", "attention_mask", "labels"])
     if cache_path and not streaming:
         cache_path.mkdir(parents=True, exist_ok=True)
         tokenized.save_to_disk(str(cache_path))
