@@ -3,7 +3,7 @@ from __future__ import annotations
 """Prompt augmentation utilities."""
 
 import logging
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Callable
 import re  # For cleaning generated text
 
 import torch
@@ -30,7 +30,12 @@ class PromptAugmenter:
     configurable generation strategies and a safety/relevance filter.
     """
 
-    def __init__(self, model_name: str, device: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        device: Optional[str] = None,
+        safety_checker: Optional[Callable[..., Any]] = None,
+    ) -> None:
         """
         Initializes the PromptAugmenter, loading the core language model for generation
         and a safety checker for ethical assurance.
@@ -40,6 +45,9 @@ class PromptAugmenter:
                                (e.g., 'distilgpt2', 'gpt2').
             device (Optional[str]): The device to load models on ('cuda' or 'cpu').
                                     Defaults to 'cuda' if available, otherwise 'cpu'.
+            safety_checker (Optional[Callable[..., Any]]): Optional external safety
+                checker. If provided, this callable will be used to evaluate generated
+                text. Otherwise, a default zero-shot classification pipeline is loaded.
         """
         log.info(f"{Colors.BLUE}Initializing PromptAugmenter for model: '{model_name}'...{Colors.RESET}")
 
@@ -59,13 +67,21 @@ class PromptAugmenter:
             # This can classify generated text for unwanted attributes like toxicity, bias, etc.
             # Example labels: ['toxic', 'hateful', 'biased', 'profane', 'relevant', 'neutral']
             # For this example, we'll focus on 'relevant' and 'toxic'.
-            self.safety_checker_model_name = "facebook/bart-large-mnli" # A robust NLI model for zero-shot
-            self.safety_checker = pipeline(
-                "zero-shot-classification",
-                model=self.safety_checker_model_name,
-                device=0 if self.device.type == 'cuda' else -1
-            )
-            log.info(f"{Colors.GREEN}Safety checker pipeline loaded for ethical assurance.{Colors.RESET}")
+            if safety_checker is not None:
+                self.safety_checker = safety_checker
+                log.info(
+                    f"{Colors.GREEN}Using injected safety checker for ethical assurance.{Colors.RESET}"
+                )
+            else:
+                self.safety_checker_model_name = "facebook/bart-large-mnli"  # A robust NLI model for zero-shot
+                self.safety_checker = pipeline(
+                    "zero-shot-classification",
+                    model=self.safety_checker_model_name,
+                    device=0 if self.device.type == 'cuda' else -1,
+                )
+                log.info(
+                    f"{Colors.GREEN}Safety checker pipeline loaded for ethical assurance.{Colors.RESET}"
+                )
 
         except Exception as e:
             log.critical(f"{Colors.RED}Failed to initialize PromptAugmenter components: {e}{Colors.RESET}")
