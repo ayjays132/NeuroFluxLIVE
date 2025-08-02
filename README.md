@@ -22,7 +22,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 ```
-The requirements files pin `numpy<2` to maintain compatibility with PyTorch.
+The requirements files pin `numpy>=1.23,<2.0` to maintain compatibility with PyTorch.
 Development extras and tests can be installed with:
 ```bash
 pip install -r requirements-dev.txt
