@@ -13,6 +13,7 @@ from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from transformers import AutoModel, AutoTokenizer
 import torch
+from utils.tensor_ops import tensor_to_ndarray
 
 from datasets import Dataset
 
@@ -138,7 +139,7 @@ def cluster_dataset_embeddings(
             hidden = outputs.last_hidden_state
             mask = attention_mask.unsqueeze(-1)
             pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1)
-        embeddings.append(pooled.cpu().numpy())
+        embeddings.append(tensor_to_ndarray(pooled))
     embeddings_arr = np.concatenate(embeddings, axis=0)
 
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
@@ -193,7 +194,7 @@ def compute_tsne_embeddings(
             hidden = outputs.last_hidden_state
             mask = attention_mask.unsqueeze(-1)
             pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1)
-        embeddings.append(pooled.cpu().numpy())
+        embeddings.append(tensor_to_ndarray(pooled))
     embeddings_arr = np.concatenate(embeddings, axis=0)
 
     tsne = TSNE(n_components=2, perplexity=perplexity, random_state=42)

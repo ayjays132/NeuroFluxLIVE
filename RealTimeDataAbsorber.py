@@ -39,6 +39,7 @@ import psutil
 import gc
 from contextlib import contextmanager
 from analysis.dataset_quality import score_record
+from utils.tensor_ops import tensor_to_ndarray
 import random
 import warnings
 warnings.filterwarnings('ignore')
@@ -123,7 +124,7 @@ class TextProcessor(ModalityProcessor):
     def extract_embeddings(self, data: str) -> np.ndarray:
         """Extract embeddings from text"""
         embeddings, _ = self.process(data)
-        return embeddings.numpy()
+        return tensor_to_ndarray(embeddings)
     
     def _analyze_sentiment(self, text: str) -> str:
         """Simple sentiment analysis"""
@@ -183,7 +184,7 @@ class ImageProcessor(ModalityProcessor):
     def extract_embeddings(self, data: np.ndarray) -> np.ndarray:
         """Extract embeddings from image"""
         embeddings, _ = self.process(data)
-        return embeddings.numpy()
+        return tensor_to_ndarray(embeddings)
     
     def _calculate_brightness(self, image) -> float:
         """Calculate average brightness"""
@@ -232,7 +233,7 @@ class AudioProcessor(ModalityProcessor):
     def extract_embeddings(self, data: np.ndarray) -> np.ndarray:
         """Extract embeddings from audio"""
         embeddings, _ = self.process(data)
-        return embeddings.numpy()
+        return tensor_to_ndarray(embeddings)
     
     def _extract_audio_features(self, audio: np.ndarray) -> np.ndarray:
         """Extract audio features (simplified MFCC-like)"""
@@ -299,7 +300,7 @@ class SensorProcessor(ModalityProcessor):
     def extract_embeddings(self, data: Dict[str, float]) -> np.ndarray:
         """Extract embeddings from sensor data"""
         embeddings, _ = self.process(data)
-        return embeddings.numpy()
+        return tensor_to_ndarray(embeddings)
 
 class PatternDetector:
     """Detect patterns and anomalies in real-time data"""
@@ -354,7 +355,9 @@ class PatternDetector:
             if dp.embeddings is not None:
                 emb = dp.embeddings
                 if self.compressor is not None and dp.metadata.get("compressed"):
-                    emb = self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"]).numpy()
+                    emb = tensor_to_ndarray(
+                        self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"])
+                    )
                 embeddings.append(emb.flatten())
         
         if len(embeddings) < 10:
@@ -368,7 +371,9 @@ class PatternDetector:
         
         current_embedding = data_point.embeddings
         if self.compressor is not None and data_point.metadata.get("compressed"):
-            current_embedding = self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"]).numpy()
+            current_embedding = tensor_to_ndarray(
+                self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"])
+            )
         current_embedding = current_embedding.flatten()
         z_scores = np.abs((current_embedding - mean_embedding) / (std_embedding + 1e-8))
         max_z_score = np.max(z_scores)
@@ -397,7 +402,9 @@ class PatternDetector:
         # Look for similar embeddings in recent history
         current_embedding = data_point.embeddings
         if self.compressor is not None and data_point.metadata.get("compressed"):
-            current_embedding = self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"]).numpy()
+            current_embedding = tensor_to_ndarray(
+                self.compressor.decode(torch.tensor(current_embedding), data_point.metadata["orig_dim"])
+            )
         current_embedding = current_embedding.flatten()
         similarities = []
         
@@ -405,7 +412,9 @@ class PatternDetector:
             if dp.embeddings is not None:
                 other_embedding = dp.embeddings
                 if self.compressor is not None and dp.metadata.get("compressed"):
-                    other_embedding = self.compressor.decode(torch.tensor(other_embedding), dp.metadata["orig_dim"]).numpy()
+                    other_embedding = tensor_to_ndarray(
+                        self.compressor.decode(torch.tensor(other_embedding), dp.metadata["orig_dim"])
+                    )
                 other_embedding = other_embedding.flatten()
                 similarity = np.dot(current_embedding, other_embedding) / (
                     np.linalg.norm(current_embedding) * np.linalg.norm(other_embedding) + 1e-8
@@ -751,7 +760,7 @@ class RealTimeDataAbsorber:
             if issues:
                 combined_metadata["quality_issues"] = issues
             
-            emb_np = embeddings.numpy()
+            emb_np = tensor_to_ndarray(embeddings)
             data_point = DataPoint(
                 data=data,
                 modality=modality,
@@ -772,7 +781,7 @@ class RealTimeDataAbsorber:
 
             if self.compressor is not None:
                 latent = self.compressor.encode(torch.tensor(data_point.embeddings))
-                data_point.embeddings = latent.numpy()
+                data_point.embeddings = tensor_to_ndarray(latent)
                 data_point.metadata["orig_dim"] = embeddings.numel()
                 data_point.metadata["compressed"] = True
             
@@ -946,7 +955,9 @@ class RealTimeDataAbsorber:
                 if dp.embeddings is not None:
                     emb = dp.embeddings
                     if self.compressor is not None and dp.metadata.get("compressed"):
-                        emb = self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"]).numpy()
+                        emb = tensor_to_ndarray(
+                            self.compressor.decode(torch.tensor(emb), dp.metadata["orig_dim"])
+                        )
                     batch_inputs[dp.modality].append(emb)
 
             tensor_inputs = {
@@ -981,7 +992,9 @@ class RealTimeDataAbsorber:
                 continue
             emb_arr = dp.embeddings
             if self.compressor is not None and dp.metadata.get("compressed"):
-                emb_arr = self.compressor.decode(torch.tensor(emb_arr), dp.metadata["orig_dim"]).numpy()
+                emb_arr = tensor_to_ndarray(
+                    self.compressor.decode(torch.tensor(emb_arr), dp.metadata["orig_dim"])
+                )
             emb = torch.tensor(emb_arr).float().unsqueeze(0)
             adapted = self.model.adapt(dp.modality, emb)
             # We do not back-prop here; just cache result / log
