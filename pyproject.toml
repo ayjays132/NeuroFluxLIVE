@@ -48,6 +48,9 @@ dependencies = [
     "websockets"
 ]
 
+[project.scripts]
+premium_workflow = "premium_workflow:main"
+
 # ------------------------------------------------------------------
 # Tell setuptools that the *current folder* (“.”) IS the package.
 # ------------------------------------------------------------------
