@@ -18,7 +18,11 @@ from transformers import (
     TrainingArguments,
 )
 
-from RealTimeDataAbsorber import RealTimeDataAbsorber
+try:  # optional at import time for environments lacking cv2
+    from RealTimeDataAbsorber import RealTimeDataAbsorber  # type: ignore
+except Exception:  # pragma: no cover
+    RealTimeDataAbsorber = None  # type: ignore
+
 from simulation_lab.gym_autonomous_trainer import (
     TrainerConfig,
     run_gym_autonomous_trainer,
@@ -115,11 +119,14 @@ def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
     use_trainer = cfg.get("rl_trainer", True)
     use_evaluator = cfg.get("evaluator", True)
 
-    absorber: RealTimeDataAbsorber | None = None
-    if use_absorber:
+    absorber: "RealTimeDataAbsorber" | None = None
+    if use_absorber and RealTimeDataAbsorber is not None:
         metrics_q: Queue = Queue()
         absorber = RealTimeDataAbsorber(model_config={}, metrics_queue=metrics_q)
         absorber.start_absorption()
+    elif use_absorber:
+        print("RealTimeDataAbsorber unavailable: optional dependency missing")
+        use_absorber = False
 
     tokenizer = AutoTokenizer.from_pretrained("ayjays132/NeuroReasoner-1-NR-1")
     model = AutoModelForCausalLM.from_pretrained(
