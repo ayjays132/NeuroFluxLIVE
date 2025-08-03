@@ -12,6 +12,11 @@ from typing import Any
 import torch
 import requests
 
+from simulation_lab.gym_autonomous_trainer import (
+    TrainerConfig,
+    run_gym_autonomous_trainer,
+)
+
 from research_workflow.topic_selector import TopicSelector
 from digital_literacy.source_evaluator import SourceEvaluator
 from simulation_lab.experiment_simulator import ExperimentSimulator
@@ -32,7 +37,7 @@ from analysis.prompt_bandit_optimizer import PromptBanditOptimizer
 from analysis.prompt_bayes_optimizer import PromptBayesOptimizer
 
 
-def main() -> None:
+def main(run_gym: bool = False) -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
@@ -77,6 +82,11 @@ def main() -> None:
     ppl = evaluate_perplexity("distilgpt2", "ag_news", split="test[:10]")
     print(f"Perplexity: {ppl:.2f}")
 
+    if run_gym:
+        rewards, responses = run_gym_autonomous_trainer(TrainerConfig())
+        print("Gym episode returns:", rewards)
+        print("Sample responses:", responses)
+
     # Prompt optimizers
     base_prompt = "Summarize the research article:"
     optim = PromptOptimizer("distilgpt2")
@@ -120,4 +130,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the ultimate workflow demo.")
+    parser.add_argument(
+        "--run-gym",
+        action="store_true",
+        help="Launch the gym autonomous trainer after the training demo.",
+    )
+    args = parser.parse_args()
+
+    main(run_gym=args.run_gym)
