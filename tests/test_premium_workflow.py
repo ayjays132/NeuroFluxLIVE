@@ -1,52 +1,42 @@
-import types
 from unittest.mock import MagicMock
-
-import torch
+import sys
+import types
 
 import premium_workflow
 
 
-def test_main_runs(monkeypatch):
-    monkeypatch.setattr(premium_workflow, "load_and_tokenize", lambda *a, **k: [])
+def test_pipeline_initializes_and_logs(monkeypatch):
+    fake_absorber = MagicMock()
+    dummy_module = types.SimpleNamespace(RealTimeDataAbsorber=lambda *a, **k: fake_absorber)
+    monkeypatch.setitem(sys.modules, "RealTimeDataAbsorber", dummy_module)
+
+    def fake_trainer(cfg, absorber=None, evaluator=None):
+        assert absorber is fake_absorber
+        assert evaluator is not None
+        evaluator("test")
+        return [1.0], ["resp"]
+
     monkeypatch.setattr(
-        premium_workflow, "analyze_tokenized_dataset", lambda *a, **k: {"samples": 0}
-    )
-    monkeypatch.setattr(premium_workflow, "train_model", lambda cfg: None)
-    monkeypatch.setattr(premium_workflow, "evaluate_perplexity", lambda *a, **k: 0.0)
-    monkeypatch.setattr(
-        premium_workflow.TopicSelector, "suggest_topic", lambda self, x: "Topic"
-    )
-    monkeypatch.setattr(
-        premium_workflow.TopicSelector, "validate_question", lambda self, q: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.SourceEvaluator,
-        "evaluate_source",
-        lambda self, url: {"credibility": "high"},
-    )
-    monkeypatch.setattr(
-        premium_workflow.ExperimentSimulator,
-        "run_physics_simulation",
-        lambda self, *a, **k: torch.tensor([0.0]),
-    )
-    monkeypatch.setattr(
-        premium_workflow.RubricGrader,
-        "grade_submission",
-        lambda self, t, r: {"Quality": {"score": 5, "max_score": 5}},
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "register_user", lambda self, *a: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "authenticate_user", lambda self, *a: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics,
-        "flag_ethical_concern",
-        lambda self, *a, **k: None,
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "get_ethical_flags", lambda self: []
+        premium_workflow, "run_gym_autonomous_trainer", fake_trainer
     )
 
-    premium_workflow.main()
+    monkeypatch.setattr(premium_workflow, "query_model", lambda *a, **k: "ok")
+    monkeypatch.setattr(premium_workflow, "AutoTokenizer", MagicMock())
+    monkeypatch.setattr(premium_workflow, "AutoModelForCausalLM", MagicMock())
+    monkeypatch.setattr(premium_workflow, "RubricGrader", MagicMock())
+    monkeypatch.setattr(
+        premium_workflow,
+        "_load_config",
+        lambda path="config.yaml": {
+            "paths": {"db_path": ":memory:"},
+            "workflow": {
+                "enable_absorber": True,
+                "enable_rl_trainer": True,
+                "enable_evaluator": True,
+            },
+        },
+    )
+
+    premium_workflow.main(["--gym"])
+    assert fake_absorber.log_performance_metrics.called
+
