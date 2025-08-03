@@ -13,3 +13,7 @@ rag:
   memory_budget: 50000
 pc:
   context_window: 32
+workflow:
+  enable_absorber: true
+  enable_rl: true
+  enable_evaluator: true
