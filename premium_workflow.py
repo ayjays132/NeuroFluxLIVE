@@ -170,13 +170,18 @@ def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
 
 
 def benchmark_sprout_agi(
-    model_name: str = "gpt2", train_samples: int = 32, eval_samples: int = 16
-) -> Tuple[float, float]:
+    model_name: str = "gpt2",
+    train_samples: int = 32,
+    eval_samples: int = 16,
+    prompt: str | None = None,
+) -> Tuple[float, float, str, str]:
     """Benchmark GPT-style models on the Sprout-AGI dataset.
 
     The function measures baseline perplexity of ``model_name`` on a small
     subset of the dataset, fine-tunes for one epoch and reports the new
-    perplexity.  It returns ``(baseline_ppl, tuned_ppl)``.
+    perplexity. Optionally, a ``prompt`` can be provided to compare model
+    generations before and after fine-tuning.  It returns ``(baseline_ppl,
+    tuned_ppl, baseline_text, tuned_text)``.
     """
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -212,6 +217,23 @@ def benchmark_sprout_agi(
     eval_tok.set_format(type="torch", columns=columns)
 
     model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+    gen_cfg = getattr(model, "generation_config", None)
+    if gen_cfg is not None:
+        gen_cfg.do_sample = True
+        gen_cfg.early_stopping = False
+        gen_cfg.length_penalty = 1.0
+
+    baseline_text = ""
+    inputs = None
+    if prompt is not None:
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        out_ids = model.generate(
+            **inputs,
+            max_length=inputs["input_ids"].shape[1] + 20,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+        seq = out_ids.sequences[0] if hasattr(out_ids, "sequences") else out_ids[0]
+        baseline_text = tokenizer.decode(seq, skip_special_tokens=True)
 
     losses = []
     loader = DataLoader(eval_tok, batch_size=2)
@@ -236,10 +258,20 @@ def benchmark_sprout_agi(
     metrics = trainer.evaluate()
     tuned_ppl = math.exp(metrics["eval_loss"])
 
+    tuned_text = ""
+    if inputs is not None:
+        out_ids = model.generate(
+            **inputs,
+            max_length=inputs["input_ids"].shape[1] + 20,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+        seq = out_ids.sequences[0] if hasattr(out_ids, "sequences") else out_ids[0]
+        tuned_text = tokenizer.decode(seq, skip_special_tokens=True)
+
     print(
         f"Sprout-AGI perplexity | baseline: {baseline_ppl:.2f} | tuned: {tuned_ppl:.2f}"
     )
-    return baseline_ppl, tuned_ppl
+    return baseline_ppl, tuned_ppl, baseline_text, tuned_text
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -253,12 +285,27 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="run Sprout-AGI fine-tuning benchmark",
     )
+    parser.add_argument(
+        "--model",
+        default="gpt2",
+        help="model name for the Sprout-AGI benchmark",
+    )
+    parser.add_argument(
+        "--prompt",
+        default=None,
+        help="optional prompt to compare generations",
+    )
     args = parser.parse_args(argv)
 
     run_research_workflow()
 
     if args.sprout_benchmark:
-        benchmark_sprout_agi()
+        base_ppl, tuned_ppl, base_txt, tuned_txt = benchmark_sprout_agi(
+            model_name=args.model, prompt=args.prompt
+        )
+        if args.prompt is not None:
+            print("Baseline generation:", base_txt)
+            print("Fine-tuned generation:", tuned_txt)
 
     if args.gym:
         with open("config.yaml", "r", encoding="utf-8") as f:

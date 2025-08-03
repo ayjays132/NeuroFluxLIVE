@@ -1,54 +1,53 @@
-# 🌐 NeuroFluxLIVE Premium Workflow
+# 🌟 NeuroFluxLIVE Premium Pipeline
 
-**NeuroFluxLIVE** fuses real‑time data absorption, language model fine‑tuning and reinforcement learning into a single, plug‑and‑play research sandbox.  The `premium_workflow.py` entrypoint runs everything: dataset ingestion, model training, prompt evaluation and optional Gym simulations.
+**NeuroFluxLIVE** merges streaming data absorption, language model fine‑tuning and reinforcement learning into one seamless workflow. The heart of the system is [`premium_workflow.py`](premium_workflow.py), exposed as a console script called `premium_workflow` after installation.
 
-## ⚙️ Installation
+## 📦 Installation
 ```bash
 pip install -r requirements.txt
 pip install -e .
 ```
-The package exposes a console script named `premium_workflow` for immediate use after installation.
 
-## 🚀 Quick Start
-Run the full demonstration pipeline:
+## 🏁 Quick Start
+Run the default demonstration:
 ```bash
 premium_workflow
 ```
-Add flags to enable extra benchmarks:
-- `--sprout-benchmark` – fine‑tune GPT‑style models on the [Sprout‑AGI](https://huggingface.co/datasets/ayjays132/Sprout-AGI) reasoning dataset.
-- `--gym` `--benchmark CartPole-v1` – launch the autonomous RL trainer alongside language prompting.
 
-## 🌱 Sprout‑AGI Benchmark
-The benchmark measures perplexity before and after a short fine‑tuning run.  Example with `gpt2`:
+### Sprout‑AGI Benchmark
+Fine‑tune any GPT‑style model on the [Sprout‑AGI](https://huggingface.co/datasets/ayjays132/Sprout-AGI) reasoning set and view perplexity shifts and prompt quality.
+```bash
+premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --prompt "The future of AI is"
+```
+Results with `ayjays132/NeuroReasoner-1-NR-1` on a small sample:
 
 | Model | Baseline PPL | Tuned PPL |
-|------|--------------|-----------|
-| gpt2 | 133.08 | 18.44 |
+|-------|--------------|-----------|
+| ayjays132/NeuroReasoner-1-NR-1 | 24.79 | 13.94 |
 
-Prompt quality also improves.  Given the prompt **“The future of AI is”**:
+Prompt **"The future of AI is"**:
 
-| Stage | Generated Continuation |
-|-------|-----------------------|
-| Baseline | *The future of AI is uncertain. The future of AI is uncertain.* |
-| Fine‑tuned | *The future of AI is a complex and complex subject matter. We will continue to explore the potential of AI to improve human understanding.* |
+| Stage | Continuation |
+|-------|-------------|
+| Baseline | *The future of AI is uncertain, with growing concerns about bias and privacy. What strategies can be implemented to mitigate these risks?* |
+| Tuned | *The future of AI is a complex, interdependent process that requires thoughtful planning and continuous iteration.* |
 
-## 🕹️ Gym RL Demo
+### Autonomous Gym Training
 ```bash
 premium_workflow --gym --benchmark CartPole-v1
 ```
-The workflow trains an agent in the environment while periodically querying the language model.  Episode returns are printed together with rubric‑based feedback scores.
+Trains a lightweight policy head inside a Gym environment while querying the language model and streaming metrics.
 
-## 🧩 Module Showcase
-`premium_workflow.py` orchestrates every module:
-- **Data ingestion** via `RealTimeDataAbsorber` (optional).
-- **Language model training** with `train.trainer`.
-- **Evaluation** using `eval.language_model_evaluator` and custom rubric grading.
-- **Simulation & RL** through `simulation_lab.gym_autonomous_trainer`.
+## 🧪 Component Overview
+- **RealTimeDataAbsorber** for live ingestion.
+- **train.trainer** for supervised fine‑tuning.
+- **eval.language_model_evaluator** for perplexity metrics.
+- **simulation_lab.gym_autonomous_trainer** for RL demos.
 
-## ✅ Testing
+## 🛠️ Development & Testing
 ```bash
 pytest
 ```
 
-## 📄 License
+## 📘 License
 Research use only.
