@@ -1,52 +1,86 @@
-import types
-from unittest.mock import MagicMock
+"""Tests for the premium workflow pipeline."""
 
-import torch
+from __future__ import annotations
+
+import logging
+import sys
+from types import SimpleNamespace
+from typing import Any, Dict
+
+import numpy as np
 
 import premium_workflow
 
 
-def test_main_runs(monkeypatch):
-    monkeypatch.setattr(premium_workflow, "load_and_tokenize", lambda *a, **k: [])
-    monkeypatch.setattr(
-        premium_workflow, "analyze_tokenized_dataset", lambda *a, **k: {"samples": 0}
+class DummyAbsorber:
+    """Lightweight stand-in for :class:`RealTimeDataAbsorber`."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.started = False
+
+    def start_absorption(self) -> None:  # pragma: no cover - trivial
+        self.started = True
+
+    def stop_absorption(self) -> None:  # pragma: no cover - trivial
+        self.started = False
+
+
+class DummyTokenizer:
+    class _Encoding(dict):
+        def to(self, device: str) -> "DummyTokenizer._Encoding":  # pragma: no cover
+            return self
+
+    def __call__(self, prompt: str, return_tensors: str = "pt") -> "DummyTokenizer._Encoding":
+        return self._Encoding({"input_ids": np.array([[1, 2]])})
+
+    def decode(self, ids: Any, skip_special_tokens: bool = True) -> str:
+        return "hello"
+
+
+class DummyModel:
+    def to(self, device: str) -> "DummyModel":  # pragma: no cover
+        return self
+
+    def generate(self, **kwargs: Any) -> Any:  # pragma: no cover - simple
+        return np.array([[1, 2, 3]])
+
+
+class DummyGrader:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def grade_submission(self, text: str, rubric: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+        return {"response": {"score": 0.5, "max_score": 1.0}}
+
+
+def test_pipeline_initializes_and_logs(monkeypatch, caplog) -> None:
+    """Pipeline should initialize all components and log metrics."""
+
+    monkeypatch.setitem(sys.modules, "RealTimeDataAbsorber", SimpleNamespace(RealTimeDataAbsorber=DummyAbsorber))
+    monkeypatch.setitem(
+        sys.modules,
+        "assessment.rubric_grader",
+        SimpleNamespace(RubricGrader=DummyGrader),
     )
-    monkeypatch.setattr(premium_workflow, "train_model", lambda cfg: None)
-    monkeypatch.setattr(premium_workflow, "evaluate_perplexity", lambda *a, **k: 0.0)
     monkeypatch.setattr(
-        premium_workflow.TopicSelector, "suggest_topic", lambda self, x: "Topic"
+        premium_workflow.AutoTokenizer, "from_pretrained", lambda *a, **k: DummyTokenizer()
     )
     monkeypatch.setattr(
-        premium_workflow.TopicSelector, "validate_question", lambda self, q: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.SourceEvaluator,
-        "evaluate_source",
-        lambda self, url: {"credibility": "high"},
-    )
-    monkeypatch.setattr(
-        premium_workflow.ExperimentSimulator,
-        "run_physics_simulation",
-        lambda self, *a, **k: torch.tensor([0.0]),
-    )
-    monkeypatch.setattr(
-        premium_workflow.RubricGrader,
-        "grade_submission",
-        lambda self, t, r: {"Quality": {"score": 5, "max_score": 5}},
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "register_user", lambda self, *a: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "authenticate_user", lambda self, *a: True
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics,
-        "flag_ethical_concern",
-        lambda self, *a, **k: None,
-    )
-    monkeypatch.setattr(
-        premium_workflow.AuthAndEthics, "get_ethical_flags", lambda self: []
+        premium_workflow.AutoModelForCausalLM, "from_pretrained", lambda *a, **k: DummyModel()
     )
 
-    premium_workflow.main()
+    config = {
+        "workflow": {
+            "enable_absorber": True,
+            "enable_rl": True,
+            "enable_evaluator": True,
+        }
+    }
+
+    caplog.set_level(logging.INFO)
+    metrics = premium_workflow.run_pipeline(config, use_gym=True, max_steps=1)
+
+    assert metrics["total_reward"] >= 0
+    assert "RealTimeDataAbsorber started" in caplog.text
+    assert "Episode 0 reward" in caplog.text
+
