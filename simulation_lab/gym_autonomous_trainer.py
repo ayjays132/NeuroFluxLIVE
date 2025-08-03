@@ -11,7 +11,7 @@ so that metrics can be consumed by other components in real time.
 
 from dataclasses import dataclass
 from queue import Queue
-from typing import List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import gym
 import logging
@@ -35,13 +35,24 @@ class TrainerConfig:
     prompt: str = "Provide a motivational message for the next move."
 
 
-def run_gym_autonomous_trainer(cfg: TrainerConfig | None = None) -> Tuple[List[float], List[str]]:
+def run_gym_autonomous_trainer(
+    cfg: TrainerConfig | None = None,
+    *,
+    absorber: Optional["RealTimeDataAbsorber"] = None,
+    evaluator: Optional[Callable[[str], float]] = None,
+) -> Tuple[List[float], List[str]]:
     """Train a small policy/value head on top of GPT-2 in a Gym environment.
 
     Parameters
     ----------
     cfg:
         Optional :class:`TrainerConfig`.  Uses sensible defaults if omitted.
+    absorber:
+        Optional :class:`RealTimeDataAbsorber` instance used to stream metrics.
+        If ``None`` a new absorber is created internally.
+    evaluator:
+        Optional callable that receives a generated response text and returns
+        an additional reward signal which is added to the environment reward.
 
     Returns
     -------
@@ -65,10 +76,11 @@ def run_gym_autonomous_trainer(cfg: TrainerConfig | None = None) -> Tuple[List[f
         list(policy_head.parameters()) + list(value_head.parameters()), lr=1e-3
     )
 
-    metrics_queue: Queue = Queue()
-    from RealTimeDataAbsorber import RealTimeDataAbsorber  # Lazy import
+    if absorber is None:
+        metrics_queue: Queue = Queue()
+        from RealTimeDataAbsorber import RealTimeDataAbsorber  # Lazy import
 
-    absorber = RealTimeDataAbsorber(model_config={}, metrics_queue=metrics_queue)
+        absorber = RealTimeDataAbsorber(model_config={}, metrics_queue=metrics_queue)
 
     episode_returns: List[float] = []
     responses: List[str] = []
@@ -93,7 +105,6 @@ def run_gym_autonomous_trainer(cfg: TrainerConfig | None = None) -> Tuple[List[f
 
             next_obs, reward, terminated, truncated, _ = env.step(action.item())
             done = terminated or truncated
-            ep_return += float(reward)
 
             prompt_ids = tokenizer(cfg.prompt, return_tensors="pt").to(device)
             response_ids = model.generate(
@@ -105,6 +116,12 @@ def run_gym_autonomous_trainer(cfg: TrainerConfig | None = None) -> Tuple[List[f
             response_text = tokenizer.decode(response_ids[0], skip_special_tokens=True)
             responses.append(response_text)
 
+            if evaluator is not None:
+                try:
+                    reward += float(evaluator(response_text))
+                except Exception as exc:  # pragma: no cover - safety net
+                    log.error("Evaluator failure: %s", exc)
+
             log.info(
                 "Episode %d Step %d | Reward: %.2f | Response: %s",
                 ep,
@@ -113,17 +130,20 @@ def run_gym_autonomous_trainer(cfg: TrainerConfig | None = None) -> Tuple[List[f
                 response_text,
             )
 
-            absorber.performance_metrics.update(
-                {"latest_reward": float(reward), "episode": ep, "step": step}
-            )
-            absorber.absorb_data(
-                response_text, "text", source="gym_autonomous_trainer", priority=1
-            )
-            absorber._emit_metrics()
+            if absorber is not None:
+                absorber.performance_metrics.update(
+                    {"latest_reward": float(reward), "episode": ep, "step": step}
+                )
+                absorber.absorb_data(
+                    response_text, "text", source="gym_autonomous_trainer", priority=1
+                )
+                if hasattr(absorber, "_emit_metrics"):
+                    absorber._emit_metrics()
 
             transitions.append((log_prob, value, reward))
             obs = next_obs
             step += 1
+            ep_return += float(reward)
 
         episode_returns.append(ep_return)
 
