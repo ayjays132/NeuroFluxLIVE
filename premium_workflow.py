@@ -250,6 +250,7 @@ def benchmark_sprout_agi(
         per_device_train_batch_size=2,
         logging_steps=10,
         report_to="none",
+        save_strategy="no",  # avoid writing large checkpoint files during quick benchmarks
     )
     trainer = Trainer(
         model=model, args=args, train_dataset=train_tok, eval_dataset=eval_tok
