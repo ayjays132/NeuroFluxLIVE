@@ -61,6 +61,23 @@ and t-SNE, executes short training loops, and calls the collaboration server,
 it benefits from a CUDA‑enabled GPU and at least **8 GB** of system RAM. On a
 CPU-only machine the demo may take several minutes to complete.
 
+### Autonomous Gym Trainer
+An optional reinforcement-learning demo can be launched with:
+
+```bash
+python ultimate_workflow.py --run-gym
+```
+
+This invokes `simulation_lab/gym_autonomous_trainer.py`, which wraps a classic
+Gym environment using GPT‑2 for policy and value prediction. Runtime
+requirements are `gym` and `torch`. During training the module reports episode
+returns and streams generated responses through `RealTimeDataAbsorber`.
+
+Expected metrics:
+
+- **Average return** per episode.
+- **Sample responses** generated alongside environment interaction.
+
 ### Embedding Compression
 `VAECompressor` can be attached to `RealTimeDataAbsorber` to reduce the size of stored embeddings. Pass an instance when constructing the absorber. The compressor trains a small variational autoencoder so embeddings are encoded to a latent vector and reconstructed only when accessed:
 
