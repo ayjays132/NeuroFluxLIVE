@@ -1,12 +1,12 @@
-# 🚀 NeuroFluxLIVE – Premium Continuous Learning Pipeline
+# 🌟 NeuroFluxLIVE Premium Workflow
 
-NeuroFluxLIVE fuses supervised fine‑tuning, reinforcement learning, and evolutionary self‑optimization into a single **always‑on** workflow. The centerpiece is [`premium_workflow.py`](premium_workflow.py), exposed as the `premium_workflow` command after installation.
+NeuroFluxLIVE unifies fine‑tuning, reinforcement learning and evolutionary search into a single always‑on pipeline. The `premium_workflow` CLI lets any Hugging Face causal model learn from streaming experience while still answering user prompts.
 
-## ✨ Features
-- **Unified pipeline** – dataset analysis, Sprout‑AGI fine‑tuning, Gym RL training, and evolutionary learning all run from one script.
-- **Model agnostic** – drop in any Hugging Face causal model (GPT‑2, LLaMA, Qwen, etc.).
-- **Continuous adaptation** – `evolutionary_learner.py` tracks performance and mutates hyper‑parameters while the model serves requests.
-- **Crash‑safe checkpoints** – tuned weights land in `sprout_benchmark/best_model` only when perplexity improves.
+## 🚀 Features
+- **Model agnostic:** supply any Hugging Face model with `--model`.
+- **Sprout‑AGI benchmark:** quick perplexity check and one‑epoch tuning.
+- **Autonomous Gym training:** policy‑gradient agent learns while chatting.
+- **Evolutionary learner:** Google‑style evolutionary engine mutates weights for continual improvement.
 
 ## 🔧 Installation
 ```bash
@@ -14,48 +14,46 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## 🚀 Quick Start
-Run the full showcase pipeline:
+## 💡 Quick Start
+Run the full demo:
 ```bash
 premium_workflow
 ```
 
-### 🔬 Sprout‑AGI Benchmark
-Evaluate **ayjays132/NeuroReasoner-1-NR-1** on the [Sprout‑AGI](https://huggingface.co/datasets/ayjays132/Sprout-AGI) dataset. The script compares baseline vs. fine‑tuned perplexity and preserves the better model.
+### Sprout‑AGI Benchmark
 ```bash
 premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --prompt "Hello world"
 ```
-Observed on CPU:
-
 | Model | Baseline PPL | Tuned PPL |
 |-------|--------------|-----------|
 | ayjays132/NeuroReasoner-1-NR-1 | 66.44 | 8.94 |
 
-Prompt **"Hello world"** produced:
-
-| Stage | Continuation |
-|-------|--------------|
-| Baseline | Hello world] [DIFFICULTY:advanced][3.5/4]. rank; |
-| Tuned | Hello world where space exploration is a global project, with diverse stakeholders and technologies to solve complex problems in time.' |
-
-### 🕹️ Autonomous Gym Training
+### CartPole Reinforcement Learning
 ```bash
-premium_workflow --gym --benchmark CartPole-v1
+python - <<'PY'
+from premium_workflow import run_autonomous_pipeline
+import yaml
+with open('config.yaml') as f:
+    cfg = yaml.safe_load(f)['workflow']
+    cfg['absorber'] = False
+run_autonomous_pipeline('CartPole-v1', cfg)
+PY
 ```
-Runs a lightweight policy gradient agent inside Gym while language model components continue to respond.
+Average reward ≈ 15.95 over three episodes.
 
-### 🧬 Evolutionary Learning
-To enable background self‑optimization, attach the evolutionary system to your agent:
-```python
-from evolutionary_learner import integrate_evolutionary_learning
-learning_system = integrate_evolutionary_learning(agent)
-```
-The system periodically mutates hyper‑parameters, evaluates fitness, and persists the best checkpoints.
-
-## 🛠 Development
-Run unit tests (requires torch ≥2.6 for full pass):
+### Evolutionary Tuning
 ```bash
-pytest
+python - <<'PY'
+from premium_workflow import run_evolutionary_learner
+run_evolutionary_learner('Hello world', 'ayjays132/NeuroReasoner-1-NR-1', generations=1, population=5)
+PY
+```
+Best fitness −13.98 with evolved continuation:
+> Hello world, where every decision you make is a!ial-Tribute to the!isphere of!ial
+
+## 🧪 Testing
+```bash
+pytest -q
 ```
 
 ## 📄 License
