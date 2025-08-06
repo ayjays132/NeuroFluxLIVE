@@ -9,6 +9,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Tuple
 
+import numpy as np
 import yaml
 import torch
 
@@ -55,6 +56,7 @@ from train.trainer import TrainingConfig, train_model
 from eval.language_model_evaluator import evaluate_perplexity
 from analysis.dataset_analyzer import analyze_tokenized_dataset
 from analysis.prompt_optimizer import PromptOptimizer
+from evolutionary_learner import GoogleEvolutionaryEngine
 
 
 def run_research_workflow() -> None:
@@ -129,6 +131,65 @@ def run_research_workflow() -> None:
     print(auth_ethics.get_ethical_flags())
 
 
+def run_evolutionary_learner(
+    prompt: str,
+    model_name: str = "gpt2",
+    generations: int = 2,
+    population: int = 10,
+) -> None:
+    """Evolve the language model's bias vector to improve prompt loss.
+
+    The function demonstrates how the :class:`GoogleEvolutionaryEngine` can
+    adapt model parameters without traditional gradient descent.  The
+    evolutionary search operates on the LM head bias which keeps the genome
+    small enough for quick experimentation while still affecting generation
+    quality.
+    """
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+
+    target = model.lm_head.bias
+    if target is None:
+        target = model.lm_head.weight[0]
+
+    genome_size = target.numel()
+    engine = GoogleEvolutionaryEngine(population_size=population)
+    engine.initialize_population(genome_size)
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+
+    def evaluator(genome: np.ndarray) -> float:
+        delta = torch.tensor(genome, device=device)
+        with torch.no_grad():
+            original = target.clone()
+            target.copy_(original + delta)
+            loss = model(**inputs, labels=inputs["input_ids"]).loss.item()
+            target.copy_(original)
+        # Lower loss == higher fitness
+        return -loss
+
+    for _ in range(generations):
+        metrics = engine.evolve_generation(evaluator)
+        print(
+            f"Generation {metrics.generation} | best fitness {metrics.best_fitness:.4f}"
+        )
+
+    best_delta = torch.tensor(engine.best_individual["genome"], device=device)
+    with torch.no_grad():
+        target.add_(best_delta)
+
+    out_ids = model.generate(
+        **inputs,
+        max_length=inputs["input_ids"].shape[1] + 20,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    seq = out_ids.sequences[0] if hasattr(out_ids, "sequences") else out_ids[0]
+    text = tokenizer.decode(seq, skip_special_tokens=True)
+    print("Evolved response:", text)
+
+
 def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
     """Run RL training with feedback and optional components."""
 
@@ -165,7 +226,8 @@ def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
         out_ids = model.generate(
             **inputs, max_length=inputs["input_ids"].shape[1] + 20, pad_token_id=tokenizer.eos_token_id
         )
-        text = tokenizer.decode(out_ids[0], skip_special_tokens=True)
+        seq = out_ids.sequences[0] if hasattr(out_ids, "sequences") else out_ids[0]
+        text = tokenizer.decode(seq, skip_special_tokens=True)
         responses.append(text)
         if absorber is not None:
             absorber.absorb_data(text, "text", source="prompt", priority=1)
@@ -328,9 +390,19 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="optional prompt to compare generations",
     )
+    parser.add_argument(
+        "--evolve",
+        action="store_true",
+        help="run evolutionary learner demo",
+    )
     args = parser.parse_args(argv)
 
     run_research_workflow()
+
+    if args.evolve:
+        run_evolutionary_learner(
+            prompt=args.prompt or "Explain evolution.", model_name=args.model
+        )
 
     if args.sprout_benchmark:
         base_ppl, tuned_ppl, base_txt, tuned_txt = benchmark_sprout_agi(
@@ -349,6 +421,7 @@ def main(argv: list[str] | None = None) -> None:
 __all__ = [
     "run_research_workflow",
     "run_autonomous_pipeline",
+    "run_evolutionary_learner",
     "benchmark_sprout_agi",
     "main",
 ]
