@@ -4,11 +4,29 @@ from __future__ import annotations
 
 import argparse
 import math
+import shutil
+from pathlib import Path
 from queue import Queue
 from typing import Tuple
 
 import yaml
 import torch
+
+# ---------------------------------------------------------------------------
+# ``safetensors`` expects a ``torch.uint64`` dtype which is not defined in some
+# PyTorch builds (e.g. 2.2).  To keep the workflow compatible across versions
+# and allow installation from PyPI without pinning a specific torch release we
+# provide a lightweight shim.  Mapping ``uint64`` to ``int64`` is sufficient for
+# the transformer weights used in this project and avoids an ``AttributeError``
+# during import.
+# ---------------------------------------------------------------------------
+if not hasattr(torch, "uint16"):  # pragma: no cover - defensive patch
+    torch.uint16 = torch.int16  # type: ignore[attr-defined]
+if not hasattr(torch, "uint32"):
+    torch.uint32 = torch.int32  # type: ignore[attr-defined]
+if not hasattr(torch, "uint64"):
+    torch.uint64 = torch.int64  # type: ignore[attr-defined]
+
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from transformers import (
@@ -258,6 +276,20 @@ def benchmark_sprout_agi(
     trainer.train()
     metrics = trainer.evaluate()
     tuned_ppl = math.exp(metrics["eval_loss"])
+    # Persist the best performing weights.  A temporary directory is used so a
+    # partially written checkpoint will not overwrite a previously good model if
+    # the process terminates unexpectedly.
+    tmp_dir = Path("./sprout_benchmark/tmp")
+    best_dir = Path("./sprout_benchmark/best_model")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(tmp_dir)
+    tokenizer.save_pretrained(tmp_dir)
+    if tuned_ppl < baseline_ppl:
+        if best_dir.exists():
+            shutil.rmtree(best_dir)
+        tmp_dir.rename(best_dir)
+    else:
+        shutil.rmtree(tmp_dir)
 
     tuned_text = ""
     if inputs is not None:
