@@ -26,7 +26,7 @@ premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --pro
 ```
 | Model | Baseline PPL | Tuned PPL |
 |-------|--------------|-----------|
-| ayjays132/NeuroReasoner-1-NR-1 | 66.44 | 8.94 |
+| ayjays132/NeuroReasoner-1-NR-1 | 221.51 | 15.43 |
 
 ### CartPole Reinforcement Learning
 ```bash
@@ -45,11 +45,20 @@ Average reward ≈ 15.95 over three episodes.
 ```bash
 python - <<'PY'
 from premium_workflow import run_evolutionary_learner
-run_evolutionary_learner('Hello world', 'ayjays132/NeuroReasoner-1-NR-1', generations=1, population=5)
+run_evolutionary_learner('Hello world', 'gpt2', generations=1, population=2)
 PY
 ```
-Best fitness −13.98 with evolved continuation:
-> Hello world, where every decision you make is a!ial-Tribute to the!isphere of!ial
+Best fitness −5.86 with evolved continuation:
+> Hello world, I'm not sure what to say.
+
+### Full Premium Pipeline
+Run research tools, RL loop and evolutionary search in one call:
+```bash
+python - <<'PY'
+from premium_workflow import run_premium_workflow
+run_premium_workflow(prompt="The sky is blue because")
+PY
+```
 
 ## 🧪 Testing
 ```bash

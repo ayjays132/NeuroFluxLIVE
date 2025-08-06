@@ -249,6 +249,27 @@ def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
         absorber.stop_absorption()
 
 
+def run_premium_workflow(
+    prompt: str,
+    model_name: str = "ayjays132/NeuroReasoner-1-NR-1",
+    env_name: str = "CartPole-v1",
+) -> None:
+    """Execute research, RL and evolutionary steps sequentially.
+
+    This helper shows how all premium components can be chained together for
+    a single experiment.  It simply invokes :func:`run_research_workflow`, the
+    RL pipeline via :func:`run_autonomous_pipeline` and finally the
+    evolutionary learner.  The individual functions remain unchanged so the
+    caller can still run them separately if desired.
+    """
+
+    run_research_workflow()
+    with open("config.yaml", "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f).get("workflow", {})
+    run_autonomous_pipeline(env_name, cfg)
+    run_evolutionary_learner(prompt=prompt, model_name=model_name)
+
+
 def benchmark_sprout_agi(
     model_name: str = "gpt2",
     train_samples: int = 32,
@@ -422,6 +443,7 @@ __all__ = [
     "run_research_workflow",
     "run_autonomous_pipeline",
     "run_evolutionary_learner",
+    "run_premium_workflow",
     "benchmark_sprout_agi",
     "main",
 ]
