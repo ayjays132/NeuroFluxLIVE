@@ -56,7 +56,8 @@ from train.trainer import TrainingConfig, train_model
 from eval.language_model_evaluator import evaluate_perplexity
 from analysis.dataset_analyzer import analyze_tokenized_dataset
 from analysis.prompt_optimizer import PromptOptimizer
-from evolutionary_learner import GoogleEvolutionaryEngine
+from evolutionary_learner import GoogleEvolutionaryEngine, integrate_evolutionary_learning
+import time
 
 
 def run_research_workflow() -> None:
@@ -188,6 +189,10 @@ def run_evolutionary_learner(
     seq = out_ids.sequences[0] if hasattr(out_ids, "sequences") else out_ids[0]
     text = tokenizer.decode(seq, skip_special_tokens=True)
     print("Evolved response:", text)
+
+    # Launch the full evolutionary learning system for continuous background tuning
+    agent = type("_TmpAgent", (), {"STATE_DIR": "./agent_state", "model": model, "last_user_request_time": time.time()})()
+    integrate_evolutionary_learning(agent)
 
 
 def run_autonomous_pipeline(env_name: str, cfg: dict) -> None:
