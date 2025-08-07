@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420">
+  <style>
+    .bg { fill: #0b1020; }
+    .axis { stroke: #475569; stroke-width: 2; }
+    .grid { stroke: #334155; stroke-width: 1; opacity: 0.35; }
+    .label { fill: #cbd5e1; font: 14px system-ui, Segoe UI, Roboto; }
+    .title { fill: #e5e7eb; font: bold 18px system-ui, Segoe UI, Roboto; }
+    .line { stroke: #38bdf8; stroke-width: 3; fill: none; }
+    .dot { fill: #38bdf8; stroke: #0ea5e9; stroke-width: 2; }
+  </style>
+  <rect class="bg" x="0" y="0" width="820" height="420" rx="12" ry="12" />
+  <text class="title" x="30" y="40">CartPole‑v1 Reward (example trace)</text>
+
+  <!-- Axes -->
+  <line class="axis" x1="80" y1="360" x2="780" y2="360" />
+  <line class="axis" x1="80" y1="80" x2="80" y2="360" />
+
+  <!-- Grid lines -->
+  <g>
+    <line class="grid" x1="80" y1="320" x2="780" y2="320" />
+    <line class="grid" x1="80" y1="280" x2="780" y2="280" />
+    <line class="grid" x1="80" y1="240" x2="780" y2="240" />
+    <line class="grid" x1="80" y1="200" x2="780" y2="200" />
+    <line class="grid" x1="80" y1="160" x2="780" y2="160" />
+    <line class="grid" x1="80" y1="120" x2="780" y2="120" />
+  </g>
+
+  <!-- Map rewards [13,16,20] to y positions (higher reward -> lower y) -->
+  <!-- Points: x = 160, 370, 580; y ≈ 320-13*5=255, 320-16*5=240, 320-20*5=220 -->
+  <polyline class="line" points="160,255 370,240 580,220" />
+  <circle class="dot" cx="160" cy="255" r="6" />
+  <circle class="dot" cx="370" cy="240" r="6" />
+  <circle class="dot" cx="580" cy="220" r="6" />
+
+  <!-- Labels -->
+  <text class="label" x="80" y="370">0</text>
+  <text class="label" x="60" y="325">10</text>
+  <text class="label" x="60" y="275">20</text>
+  <text class="label" x="60" y="225">30</text>
+  <text class="label" x="420" y="405">Episodes</text>
+  <text class="label" x="18" y="60">Reward</text>
+</svg>
