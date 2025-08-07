@@ -74,14 +74,16 @@ def run_research_workflow() -> None:
 
     # Dataset loading and analysis
     print("\n=== Dataset Loading & Analysis ===")
-    tokenized_ds = load_and_tokenize("ag_news", "train[:50]", "distilgpt2")
+    tokenized_ds = load_and_tokenize(
+        "ag_news", "train[:50]", "ayjays132/NeuroReasoner-1-NR-1"
+    )
     stats = analyze_tokenized_dataset(tokenized_ds, max_samples=50)
     print(f"Dataset stats: {stats}")
 
     # Quick training demo
     print("\n=== Training Demo ===")
     cfg = TrainingConfig(
-        model_name="distilgpt2",
+        model_name="ayjays132/NeuroReasoner-1-NR-1",
         dataset_name="ag_news",
         train_split="train[:10]",
         eval_split="test[:10]",
@@ -92,11 +94,13 @@ def run_research_workflow() -> None:
     train_model(cfg)
 
     # Evaluate perplexity
-    ppl = evaluate_perplexity("distilgpt2", "ag_news", split="test[:10]")
+    ppl = evaluate_perplexity(
+        "ayjays132/NeuroReasoner-1-NR-1", "ag_news", split="test[:10]"
+    )
     print(f"Perplexity on small set: {ppl:.2f}")
 
     # Prompt optimization example
-    optimizer = PromptOptimizer("distilgpt2")
+    optimizer = PromptOptimizer("ayjays132/NeuroReasoner-1-NR-1")
     best_prompt = optimizer.optimize_prompt("Summarize the research article:")
     print(f"Optimized prompt: {best_prompt}")
 
@@ -133,7 +137,7 @@ def run_research_workflow() -> None:
 
 def run_evolutionary_learner(
     prompt: str,
-    model_name: str = "gpt2",
+    model_name: str = "ayjays132/NeuroReasoner-1-NR-1",
     generations: int = 2,
     population: int = 10,
 ) -> None:
@@ -271,7 +275,7 @@ def run_premium_workflow(
 
 
 def benchmark_sprout_agi(
-    model_name: str = "gpt2",
+    model_name: str = "ayjays132/NeuroReasoner-1-NR-1",
     train_samples: int = 32,
     eval_samples: int = 16,
     prompt: str | None = None,
@@ -403,7 +407,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--model",
-        default="gpt2",
+        default="ayjays132/NeuroReasoner-1-NR-1",
         help="model name for the Sprout-AGI benchmark",
     )
     parser.add_argument(

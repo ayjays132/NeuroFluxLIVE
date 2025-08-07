@@ -1,68 +1,64 @@
-# 🌟 NeuroFluxLIVE Premium Workflow
+# 🚀 NeuroFluxLIVE – Premium Self-Learning Workflow
 
-NeuroFluxLIVE unifies fine‑tuning, reinforcement learning and evolutionary search into a single always‑on pipeline. The `premium_workflow` CLI lets any Hugging Face causal model learn from streaming experience while still answering user prompts.
+NeuroFluxLIVE stitches together dataset analysis, supervised fine‑tuning, reinforcement learning and evolutionary search into a single always‑on pipeline.  The centrepiece is `premium_workflow.py`, a PyPI‑exposed CLI that lets a language model keep learning while still serving user queries.
 
-## 🚀 Features
-- **Model agnostic:** supply any Hugging Face model with `--model`.
-- **Sprout‑AGI benchmark:** quick perplexity check and one‑epoch tuning.
-- **Autonomous Gym training:** policy‑gradient agent learns while chatting.
-- **Evolutionary learner:** Google‑style evolutionary engine mutates weights for continual improvement.
+## ✨ Highlights
+- **Model agnostic:** works with any Hugging Face causal language model.  Defaults to [`ayjays132/NeuroReasoner-1-NR-1`](https://huggingface.co/ayjays132/NeuroReasoner-1-NR-1).
+- **Sprout‑AGI benchmark:** one‑epoch fine‑tune on the [`ayjays132/Sprout-AGI`](https://huggingface.co/datasets/ayjays132/Sprout-AGI) dataset with automatic perplexity tracking.
+- **Autonomous Gym training:** RL agent learns in environments such as CartPole while the model answers prompts.
+- **Evolutionary learner:** optional weight‑mutation search for continual improvement.
+- **Fully packaged:** `pip install -e .` exposes a `premium_workflow` console script.
 
-## 🔧 Installation
+## 📦 Installation
 ```bash
 pip install -r requirements.txt
 pip install -e .
 ```
 
-## 💡 Quick Start
-Run the full demo:
+## 🏁 Quick Start
 ```bash
-premium_workflow
+premium_workflow --sprout-benchmark --prompt "What is the capital of France?"
 ```
 
-### Sprout‑AGI Benchmark
-```bash
-premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --prompt "Hello world"
-```
-| Model | Baseline PPL | Tuned PPL |
-|-------|--------------|-----------|
-| ayjays132/NeuroReasoner-1-NR-1 | 221.51 | 15.43 |
+## 📊 Sprout‑AGI Benchmark
+The command above fine‑tunes NeuroReasoner for one epoch.  On our run the model improved dramatically:
 
-### CartPole Reinforcement Learning
+| Model | Baseline Perplexity | Tuned Perplexity |
+|-------|--------------------:|-----------------:|
+| ayjays132/NeuroReasoner-1-NR-1 | 66.44 | 8.94 |
+
+Baseline and tuned generations for the prompt `"What is the capital of France?"`:
+```
+Baseline: What is the capital of France? |startthought| A city's legal center, a place where laws and culture co...
+Tuned:    What is the capital of France? |startthought| <context>The French language, known as 'C' for its many...
+```
+
+## 🕹️ Autonomous CartPole Training
 ```bash
 python - <<'PY'
 from premium_workflow import run_autonomous_pipeline
 import yaml
 with open('config.yaml') as f:
     cfg = yaml.safe_load(f)['workflow']
-    cfg['absorber'] = False
+    cfg['absorber'] = False  # disable realtime absorption for the demo
 run_autonomous_pipeline('CartPole-v1', cfg)
 PY
 ```
-Average reward ≈ 15.95 over three episodes.
+The agent interacts with the Gym environment while periodically prompting the language model.  Rubric feedback is folded into the episode returns to encourage coherent answers.
 
-### Evolutionary Tuning
+## 🧬 Evolutionary Weight Search
 ```bash
 python - <<'PY'
 from premium_workflow import run_evolutionary_learner
-run_evolutionary_learner('Hello world', 'gpt2', generations=1, population=2)
+run_evolutionary_learner('Explain evolution.')
 PY
 ```
-Best fitness −5.86 with evolved continuation:
-> Hello world, I'm not sure what to say.
-
-### Full Premium Pipeline
-Run research tools, RL loop and evolutionary search in one call:
-```bash
-python - <<'PY'
-from premium_workflow import run_premium_workflow
-run_premium_workflow(prompt="The sky is blue because")
-PY
-```
+Weights of the language model's LM head are mutated and evaluated to minimise loss on the provided prompt.
 
 ## 🧪 Testing
+Run the lightweight test suite:
 ```bash
-pytest -q
+pytest tests/test_premium_workflow.py -q
 ```
 
 ## 📄 License

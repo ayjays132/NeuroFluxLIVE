@@ -9,6 +9,17 @@ SelfResearch – package wrapper & legacy-import shim.
 __version__ = "1.1.1"
 from pathlib import Path
 import importlib, pkgutil, sys as _sys
+import torch
+
+# ------------------------------------------------------------------
+# Safetensors compatibility shim
+# ------------------------------------------------------------------
+if not hasattr(torch, "uint16"):  # pragma: no cover
+    torch.uint16 = torch.int16  # type: ignore[attr-defined]
+if not hasattr(torch, "uint32"):
+    torch.uint32 = torch.int32  # type: ignore[attr-defined]
+if not hasattr(torch, "uint64"):
+    torch.uint64 = torch.int64  # type: ignore[attr-defined]
 
 # ------------------------------------------------------------------ #
 # 1.  Put repo root on sys.path                                      #
