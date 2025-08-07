@@ -1,25 +1,22 @@
-# 🌟 NeuroFluxLIVE Premium Workflow
+# 🚀 NeuroFluxLIVE Premium Workflow
 
-NeuroFluxLIVE fuses data ingestion, reinforcement learning, and evolutionary search into a single always-on research pipeline.  The `premium_workflow` CLI works with any Hugging Face causal language model so the system can answer prompts while continuing to learn in the background.
+NeuroFluxLIVE unifies research tools, reinforcement learning, and evolutionary search so a language model can keep learning while answering questions in real time.  The `premium_workflow` CLI works with any Hugging Face causal model and provides a single command entry point for experimentation.
 
-## ✨ Features
-- **Model agnostic** – supply any Hugging Face identifier with `--model`.
-- **Sprout‑AGI benchmark** – quick perplexity check and one‑epoch fine‑tuning.
-- **Autonomous Gym training** – policy‑gradient agent learns while chatting.
-- **Evolutionary learner** – background evolutionary system continually adapts weights.
-
-## 🚀 Getting Started
+## 🌐 Installation
 ```bash
 pip install -r requirements.txt
 pip install -e .
 ```
-Run the full demo:
-```bash
-premium_workflow
-```
 
-### Sprout‑AGI Benchmark
-Evaluate and fine‑tune any model on the `ayjays132/Sprout-AGI` dataset:
+## ⚙️ Quick Start
+Run the full pipeline with your preferred model and prompt:
+```bash
+premium_workflow --model ayjays132/NeuroReasoner-1-NR-1 --prompt "The future of AI"
+```
+The command performs a research demo, trains an RL policy in Gym, and launches the evolutionary learner.
+
+## 📊 Sprout‑AGI Benchmark
+Measure baseline perplexity, fine‑tune for one epoch on `ayjays132/Sprout-AGI`, and compare generations:
 ```bash
 premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --prompt "The future of AI"
 ```
@@ -28,12 +25,12 @@ premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --pro
 | ayjays132/NeuroReasoner-1-NR-1 | 66.44 | 8.94 |
 
 Baseline generation:
-> The future of AI in human-like behavior? A decade from now, what is the societal impact on
+> The future of AI is a blend between wonder and caution. |endthought| What are the key challenges
 
 Fine‑tuned generation:
-> The future of AI ethics is uncertain but transformative. What policies can be implemented to ensure ethical behavior in critical systems?
+> The future of AI ethics is uncertain but transformative. What policies can be implemented to ensure ethical behavior in critical systems? |
 
-### CartPole Reinforcement Learning
+## 🕹️ CartPole Reinforcement Learning
 ```bash
 python - <<'PY'
 from premium_workflow import run_autonomous_pipeline
@@ -41,34 +38,35 @@ import yaml
 with open('config.yaml') as f:
     cfg = yaml.safe_load(f)['workflow']
     cfg['absorber'] = False
+    cfg['evaluator'] = False
 run_autonomous_pipeline('CartPole-v1', cfg)
 PY
 ```
-Average reward ≈20.6 over three episodes.
+Example reward trace: `[13.0, 16.0, 20.0]`.
 
-### Evolutionary Tuning
+## 🧬 Evolutionary Learner
 ```bash
 python - <<'PY'
 from premium_workflow import run_evolutionary_learner
-run_evolutionary_learner('Explain evolution.', model_name='ayjays132/NeuroReasoner-1-NR-1')
+run_evolutionary_learner("Explain evolution.", model_name="ayjays132/NeuroReasoner-1-NR-1")
 PY
 ```
-The function evolves the model's bias vector and then launches a background evolutionary system for continuous improvement.
+The learner mutates the model's bias vector and spins up a background evolutionary system for continuous self‑improvement.
 
-### Full Premium Pipeline
-Run research tools, RL loop, and evolutionary search together:
+## 🔗 Full Premium Pipeline
 ```bash
 python - <<'PY'
 from premium_workflow import run_premium_workflow
 run_premium_workflow(prompt="The sky is blue because")
 PY
 ```
+This chains the research demo, Gym training, and evolutionary tuning into one seamless experiment.
 
 ## 🧪 Testing
 ```bash
 pytest -q
 ```
-(Tests currently fail because the installed PyTorch build lacks the `uint64` dtype.)
+(Currently fails because the installed PyTorch build lacks a `uint64` dtype used by `safetensors`.)
 
 ## 📄 License
 Research use only.

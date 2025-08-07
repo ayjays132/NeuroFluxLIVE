@@ -191,7 +191,16 @@ def run_evolutionary_learner(
     print("Evolved response:", text)
 
     # Launch the full evolutionary learning system for continuous background tuning
-    agent = type("_TmpAgent", (), {"STATE_DIR": "./agent_state", "model": model, "last_user_request_time": time.time()})()
+    agent = type(
+        "_TmpAgent",
+        (),
+        {
+            "STATE_DIR": "./agent_state",
+            "model": model,
+            "last_user_request_time": time.time(),
+            "performance_metrics": {},
+        },
+    )()
     integrate_evolutionary_learning(agent)
 
 
