@@ -1,6 +1,6 @@
 # 🌟 NeuroFluxLIVE Premium Workflow
 
-NeuroFluxLIVE unifies fine‑tuning, reinforcement learning and evolutionary search into a single always‑on pipeline. The `premium_workflow` CLI lets any Hugging Face causal model learn from streaming experience while still answering user prompts.
+NeuroFluxLIVE unifies fine‑tuning, reinforcement learning and evolutionary search into a single always‑on pipeline. The `premium_workflow` CLI ships with `ayjays132/NeuroReasoner-1-NR-1` as the default GPT‑2‑style backbone but accepts any Hugging Face causal model, learning from streaming experience while still answering user prompts.
 
 ## 🚀 Features
 - **Model agnostic:** supply any Hugging Face model with `--model`.
@@ -15,7 +15,7 @@ pip install -e .
 ```
 
 ## 💡 Quick Start
-Run the full demo:
+Run the full demo (defaults to `ayjays132/NeuroReasoner-1-NR-1`):
 ```bash
 premium_workflow
 ```
@@ -24,6 +24,8 @@ premium_workflow
 ```bash
 premium_workflow --sprout-benchmark --model ayjays132/NeuroReasoner-1-NR-1 --prompt "Hello world"
 ```
+Example run:
+
 | Model | Baseline PPL | Tuned PPL |
 |-------|--------------|-----------|
 | ayjays132/NeuroReasoner-1-NR-1 | 221.51 | 15.43 |
@@ -45,7 +47,7 @@ Average reward ≈ 15.95 over three episodes.
 ```bash
 python - <<'PY'
 from premium_workflow import run_evolutionary_learner
-run_evolutionary_learner('Hello world', 'gpt2', generations=1, population=2)
+run_evolutionary_learner('Hello world', 'ayjays132/NeuroReasoner-1-NR-1', generations=1, population=2)
 PY
 ```
 Best fitness −5.86 with evolved continuation:
